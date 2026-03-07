@@ -1,20 +1,44 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
 import { StepIndicator, OnboardingStep } from '@/components/onboarding'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, Alert } from '@/components/ui'
 import { PageLayout, Stack } from '@/components/layout'
 
 const TOTAL_STEPS = 3
 
+/** Non-empty object to mark onboarding as complete */
+const ONBOARDING_COMPLETE_INTERESTS = { onboardingComplete: true }
+
 export function OnboardingPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [step, setStep] = useState(1)
   const [name, setName] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (step < TOTAL_STEPS) {
       setStep(step + 1)
     } else {
+      if (!user?.id) return
+      setSaving(true)
+      setError(null)
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ interests: ONBOARDING_COMPLETE_INTERESTS })
+        .eq('id', user.id)
+
+      setSaving(false)
+
+      if (updateError) {
+        setError(updateError.message)
+        return
+      }
+
       navigate('/home', { replace: true })
     }
   }
@@ -22,6 +46,7 @@ export function OnboardingPage() {
   return (
     <PageLayout maxWidth="sm" centered>
       <Stack gap="xl" align="center">
+        {error && <Alert variant="error">{error}</Alert>}
         <StepIndicator currentStep={step} totalSteps={TOTAL_STEPS} />
 
         {step === 1 && (
@@ -73,7 +98,7 @@ export function OnboardingPage() {
             description="Your account is ready. Let's get started."
           >
             <Stack gap="lg">
-              <Button variant="primary" size="lg" fullWidth onClick={handleComplete}>
+              <Button variant="primary" size="lg" fullWidth onClick={handleComplete} loading={saving}>
                 Go to Home
               </Button>
             </Stack>

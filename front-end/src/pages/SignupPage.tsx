@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { ensureUserProfile } from '@/lib/userProfile'
 import { AuthForm, AuthFormField } from '@/components/auth'
 import { Button, Alert } from '@/components/ui'
 import { PageLayout, Stack } from '@/components/layout'
@@ -12,6 +13,7 @@ export function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,9 +31,12 @@ export function SignupPage() {
 
     setLoading(true)
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/onboarding`,
+      },
     })
 
     setLoading(false)
@@ -41,7 +46,44 @@ export function SignupPage() {
       return
     }
 
+    // If email confirmation is required, user won't be signed in yet
+    if (data.user && !data.session) {
+      setEmailSent(true)
+      return
+    }
+
+    // No email confirmation - create user row and go to onboarding
+    if (data.user?.id) {
+      const { error: profileError } = await ensureUserProfile(data.user.id)
+      if (profileError) {
+        setError(profileError.message)
+        return
+      }
+    }
+
     navigate('/onboarding', { replace: true })
+  }
+
+  if (emailSent) {
+    return (
+      <PageLayout maxWidth="sm" centered>
+        <AuthForm
+          title="Check your email"
+          subtitle={`We sent a confirmation link to ${email}. Click the link to verify your account and get started.`}
+          footerLink={{
+            prompt: 'Already have an account?',
+            linkText: 'Log in',
+            to: '/login',
+          }}
+        >
+          <Stack gap="lg">
+            <Alert variant="success">
+              Check your inbox and click the confirmation link. You'll be redirected to onboarding after verifying.
+            </Alert>
+          </Stack>
+        </AuthForm>
+      </PageLayout>
+    )
   }
 
   return (
