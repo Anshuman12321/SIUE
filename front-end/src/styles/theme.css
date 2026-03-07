@@ -1,0 +1,76 @@
+/* Life360-inspired design tokens */
+
+:root {
+  /* Colors */
+  --color-primary: #8652FF;
+  --color-primary-hover: #7040e0;
+  --color-primary-light: rgba(134, 82, 255, 0.15);
+  --color-downriver: #092C45;
+  --color-downriver-light: rgba(9, 44, 69, 0.8);
+  --color-bermuda: #85C8DB;
+  --color-bermuda-light: rgba(133, 200, 219, 0.3);
+  --color-athens: #F6F5F8;
+  --color-white: #FFFFFF;
+  --color-muted: #6B7280;
+  --color-error: #DC2626;
+  --color-success: #16A34A;
+  --color-info: #2563EB;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #8652FF 0%, #a78bfa 100%);
+  --gradient-hero: linear-gradient(180deg, rgba(134, 82, 255, 0.08) 0%, rgba(246, 245, 248, 1) 100%);
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 2rem;
+  --font-size-4xl: 2.5rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(9, 44, 69, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(9, 44, 69, 0.08), 0 2px 4px -2px rgba(9, 44, 69, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(9, 44, 69, 0.1), 0 4px 6px -4px rgba(9, 44, 69, 0.08);
+  --shadow-xl: 0 20px 25px -5px rgba(9, 44, 69, 0.1), 0 8px 10px -6px rgba(9, 44, 69, 0.08);
+
+  /* Container */
+  --container-sm: 640px;
+  --container-md: 768px;
+  --container-lg: 1024px;
+  --container-xl: 1280px;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --spacing-xl: 1.5rem;
+    --spacing-2xl: 2rem;
+    --spacing-3xl: 2.5rem;
+  }
+}

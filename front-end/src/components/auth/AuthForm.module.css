@@ -1,0 +1,28 @@
+.authForm {
+  width: 100%;
+  max-width: 400px;
+}
+
+.header {
+  margin-bottom: var(--spacing-xl);
+  text-align: center;
+}
+
+.title {
+  margin-bottom: var(--spacing-sm);
+}
+
+.subtitle {
+  margin: 0;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.footer {
+  margin-top: var(--spacing-xl);
+  text-align: center;
+}
