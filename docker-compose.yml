@@ -1,37 +1,14 @@
-version: '3.8'
-
 services:
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: siue-backend
+    build: ./backend
     ports:
       - "8000:8000"
-    environment:
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./backend:/app
-    command: python main.py
-    networks:
-      - siue-network
-    # Uncomment to auto-restart on failure
-    # restart: unless-stopped
+    restart: unless-stopped
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: siue-frontend
+    build: ./frontend
     ports:
       - "80:80"
     depends_on:
       - backend
-    networks:
-      - siue-network
-    # Uncomment to auto-restart on failure
-    # restart: unless-stopped
-
-networks:
-  siue-network:
-    driver: bridge
+    restart: unless-stopped

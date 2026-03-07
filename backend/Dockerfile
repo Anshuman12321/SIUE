@@ -1,22 +1,25 @@
-# Backend Dockerfile
 FROM python:3.12-slim
 
-# Set working directory
-WORKDIR /app
-
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy project files
-COPY pyproject.toml README.md ./
-COPY . .
+WORKDIR /app
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -e .
+# Copy requirements if they exist, otherwise create empty one
+COPY requirements.txt* ./
+RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi
 
-# Expose port (adjust if your backend uses a different port)
+# Copy application files
+COPY *.py ./
+
+# Create data directory for persistent storage
+RUN mkdir -p /app/data /app/cache
+
+# Expose port
 EXPOSE 8000
 
-# Default command - adjust as needed for your server
-CMD ["python", "main.py"]
+# Start the server using Uvicorn
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
