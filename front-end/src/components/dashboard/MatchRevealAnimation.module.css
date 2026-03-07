@@ -1,0 +1,54 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-hero);
+  padding: var(--spacing-xl);
+}
+
+.content {
+  position: relative;
+  text-align: center;
+}
+
+.confetti {
+  position: absolute;
+  inset: -50px;
+  background: radial-gradient(circle at 30% 20%, var(--color-primary-light) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, var(--color-bermuda-light) 0%, transparent 50%);
+  animation: pulse 1.5s ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+.card {
+  background: var(--color-white);
+  padding: var(--spacing-3xl);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.title {
+  margin: 0 0 var(--spacing-md);
+}
+
+.subtitle {
+  margin: 0;
+}

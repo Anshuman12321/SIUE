@@ -1,11 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from '@/contexts/AuthContext'
-import { ProtectedRoute } from '@/components/auth'
+import { ProtectedRoute, OnboardingGuard } from '@/components/auth'
 import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { SignupPage } from '@/pages/SignupPage'
 import { OnboardingPage } from '@/pages/OnboardingPage'
 import { HomePage } from '@/pages/HomePage'
+import { PreferencesPage } from '@/pages/PreferencesPage'
 
 function App() {
   return (
@@ -27,7 +28,19 @@ function App() {
             path="/home"
             element={
               <ProtectedRoute>
-                <HomePage />
+                <OnboardingGuard>
+                  <HomePage />
+                </OnboardingGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/preferences"
+            element={
+              <ProtectedRoute>
+                <OnboardingGuard>
+                  <PreferencesPage />
+                </OnboardingGuard>
               </ProtectedRoute>
             }
           />
