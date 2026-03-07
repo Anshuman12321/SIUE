@@ -1,164 +1,175 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageLayout } from '@/components/layout'
-import { Stack, Flex } from '@/components/layout'
-import { Button, Input, Text, Card } from '@/components/ui'
+import { MOCK_USER_PREFERENCES } from '@/data/mockData'
+import { Button } from '@/components/ui'
+import styles from '@/components/dashboard/Dashboard.module.css'
 
-const AGE_GROUPS = ['18-24', '25-34', '35-44', '45-54', '55+']
-const BUDGET_OPTIONS = ['$', '$$', '$$$', '$$$$']
-const ACTIVITY_OPTIONS = ['Drinks', 'Sports', 'Dining', 'Outdoors', 'Games', 'Music', 'Arts']
+const AGE_GROUPS = ['18-20', '21-25', '26-30', '31+']
+const BUDGETS = ['$', '$$', '$$$', '$$$$']
+const ACTIVITY_TYPES = [
+  'Sports & Outdoors',
+  'Food & Drink',
+  'Arts & Culture',
+  'Nightlife',
+  'Gaming',
+  'Music',
+  'Wellness',
+  'Learning',
+]
+const VIBES = [
+  'Chill but spontaneous',
+  'High energy',
+  'Competitive',
+  'Laid back',
+  'Adventurous',
+  'Social butterfly',
+]
 
 export function PreferencesPage() {
   const navigate = useNavigate()
-  const [location, setLocation] = useState('')
-  const [ageGroup, setAgeGroup] = useState('')
-  const [alcoholOk, setAlcoholOk] = useState<'yes' | 'no' | ''>('')
-  const [budget, setBudget] = useState('')
-  const [activities, setActivities] = useState<string[]>([])
-  const [vibe, setVibe] = useState('')
-  const [saved, setSaved] = useState(false)
 
-  const toggleActivity = (activity: string) => {
-    setActivities((prev) =>
-      prev.includes(activity) ? prev.filter((a) => a !== activity) : [...prev, activity]
-    )
-  }
+  const [location, setLocation] = useState(MOCK_USER_PREFERENCES.location)
+  const [ageGroup, setAgeGroup] = useState(MOCK_USER_PREFERENCES.ageGroup)
+  const [alcohol, setAlcohol] = useState(MOCK_USER_PREFERENCES.alcohol)
+  const [budget, setBudget] = useState(MOCK_USER_PREFERENCES.budget)
+  const [activity, setActivity] = useState(MOCK_USER_PREFERENCES.activityType)
+  const [vibe, setVibe] = useState(MOCK_USER_PREFERENCES.vibe)
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Hardcoded save - store in localStorage for persistence across refresh
-    const prefs = {
-      location,
-      ageGroup,
-      alcoholOk,
-      budget,
-      activities,
-      vibe,
-    }
-    localStorage.setItem('userPreferences', JSON.stringify(prefs))
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const handleSave = () => {
+    navigate('/home')
   }
 
   return (
-    <PageLayout maxWidth="md">
-      <Stack gap="xl">
-        <Flex justify="between" align="center">
-          <Text as="h1" size="2xl" weight="bold">
-            Your Preferences
-          </Text>
-          <Button variant="ghost" onClick={() => navigate('/home')}>
-            Back to Home
-          </Button>
-        </Flex>
+    <div className={styles.preferencesPage}>
+      <div className={styles.topBar}>
+        <span className={styles.topBarLogo}>Connect</span>
+        <div className={styles.topBarRight}>
+          <button
+            type="button"
+            className={styles.topBarBtn}
+            onClick={() => navigate('/home')}
+          >
+            ← Back to Dashboard
+          </button>
+        </div>
+      </div>
 
-        <Card variant="elevated">
-          <Card.Body>
-            <form onSubmit={handleSave}>
-              <Stack gap="lg">
-                <Input
-                  label="Location"
-                  placeholder="City or area"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                />
+      <div className={styles.preferencesContent}>
+        <div className={styles.preferencesHeader}>
+          <h1>Your Preferences</h1>
+          <p>Fine-tune how we match you with groups and events.</p>
+        </div>
 
-                <div>
-                  <Text as="span" size="sm" weight="medium" style={{ display: 'block', marginBottom: 'var(--spacing-sm)' }}>
-                    Age group
-                  </Text>
-                  <Flex gap="sm" wrap>
-                    {AGE_GROUPS.map((age) => (
-                      <Button
-                        key={age}
-                        type="button"
-                        variant={ageGroup === age ? 'primary' : 'outline'}
-                        size="sm"
-                        onClick={() => setAgeGroup(age)}
-                      >
-                        {age}
-                      </Button>
-                    ))}
-                  </Flex>
-                </div>
+        <div className={styles.prefCard}>
+          <div className={styles.prefGroup}>
+            <p className={styles.prefLabel}>📍 Location</p>
+            <input
+              className={styles.prefValue}
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              style={{ width: '100%', border: 'none', fontFamily: 'inherit', fontSize: 'inherit' }}
+            />
+          </div>
 
-                <div>
-                  <Text as="span" size="sm" weight="medium" style={{ display: 'block', marginBottom: 'var(--spacing-sm)' }}>
-                    Alcohol
-                  </Text>
-                  <Flex gap="sm">
-                    <Button
-                      type="button"
-                      variant={alcoholOk === 'yes' ? 'primary' : 'outline'}
-                      size="sm"
-                      onClick={() => setAlcoholOk('yes')}
-                    >
-                      Yes
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={alcoholOk === 'no' ? 'primary' : 'outline'}
-                      size="sm"
-                      onClick={() => setAlcoholOk('no')}
-                    >
-                      No
-                    </Button>
-                  </Flex>
-                </div>
+          <hr className={styles.divider} />
 
-                <div>
-                  <Text as="span" size="sm" weight="medium" style={{ display: 'block', marginBottom: 'var(--spacing-sm)' }}>
-                    Budget
-                  </Text>
-                  <Flex gap="sm" wrap>
-                    {BUDGET_OPTIONS.map((b) => (
-                      <Button
-                        key={b}
-                        type="button"
-                        variant={budget === b ? 'primary' : 'outline'}
-                        size="sm"
-                        onClick={() => setBudget(b)}
-                      >
-                        {b}
-                      </Button>
-                    ))}
-                  </Flex>
-                </div>
+          <div className={styles.prefGroup}>
+            <p className={styles.prefLabel}>🎂 Preferred Age Group</p>
+            <div className={styles.prefChips}>
+              {AGE_GROUPS.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  className={`${styles.prefChip} ${ageGroup === g ? styles.prefChipActive : ''}`}
+                  onClick={() => setAgeGroup(g)}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
 
-                <div>
-                  <Text as="span" size="sm" weight="medium" style={{ display: 'block', marginBottom: 'var(--spacing-sm)' }}>
-                    Activity types
-                  </Text>
-                  <Flex gap="sm" wrap>
-                    {ACTIVITY_OPTIONS.map((a) => (
-                      <Button
-                        key={a}
-                        type="button"
-                        variant={activities.includes(a) ? 'primary' : 'outline'}
-                        size="sm"
-                        onClick={() => toggleActivity(a)}
-                      >
-                        {a}
-                      </Button>
-                    ))}
-                  </Flex>
-                </div>
+          <hr className={styles.divider} />
 
-                <Input
-                  label="Vibe"
-                  placeholder="Describe your vibe (e.g. chill, energetic)"
-                  value={vibe}
-                  onChange={(e) => setVibe(e.target.value)}
-                />
+          <div className={styles.prefGroup}>
+            <p className={styles.prefLabel}>🍹 Alcohol-friendly events</p>
+            <div className={styles.prefToggle}>
+              <span style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-sm)' }}>
+                {alcohol ? 'Include alcohol-related events' : 'No alcohol events'}
+              </span>
+              <button
+                type="button"
+                className={styles.toggleSwitch}
+                data-on={alcohol.toString()}
+                onClick={() => setAlcohol(!alcohol)}
+              />
+            </div>
+          </div>
 
-                <Button type="submit" variant="primary" size="lg">
-                  {saved ? 'Saved!' : 'Save Changes'}
-                </Button>
-              </Stack>
-            </form>
-          </Card.Body>
-        </Card>
-      </Stack>
-    </PageLayout>
+          <hr className={styles.divider} />
+
+          <div className={styles.prefGroup}>
+            <p className={styles.prefLabel}>💰 Budget</p>
+            <div className={styles.prefChips}>
+              {BUDGETS.map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  className={`${styles.prefChip} ${budget === b ? styles.prefChipActive : ''}`}
+                  onClick={() => setBudget(b)}
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <hr className={styles.divider} />
+
+          <div className={styles.prefGroup}>
+            <p className={styles.prefLabel}>🏄 Activity Type</p>
+            <div className={styles.prefChips}>
+              {ACTIVITY_TYPES.map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  className={`${styles.prefChip} ${activity === a ? styles.prefChipActive : ''}`}
+                  onClick={() => setActivity(a)}
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <hr className={styles.divider} />
+
+          <div className={styles.prefGroup}>
+            <p className={styles.prefLabel}>✨ Vibe</p>
+            <div className={styles.prefChips}>
+              {VIBES.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  className={`${styles.prefChip} ${vibe === v ? styles.prefChipActive : ''}`}
+                  onClick={() => setVibe(v)}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.prefActions}>
+            <Button variant="primary" onClick={handleSave}>
+              Save Preferences
+            </Button>
+            <Button variant="ghost" onClick={() => navigate('/home')}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

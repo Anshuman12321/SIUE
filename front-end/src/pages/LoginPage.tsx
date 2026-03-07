@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { AuthForm, AuthFormField } from '@/components/auth'
 import { Button, Alert } from '@/components/ui'
 import { PageLayout, Stack } from '@/components/layout'
+import { isOnboardingComplete } from '@/hooks/useUserProfile'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -17,19 +18,31 @@ export function LoginPage() {
     setError(null)
     setLoading(true)
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
-    setLoading(false)
-
     if (signInError) {
+      setLoading(false)
       setError(signInError.message)
       return
     }
 
-    navigate('/home', { replace: true })
+    if (data.user) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('interests')
+        .eq('id', data.user.id)
+        .single()
+
+      const completed = isOnboardingComplete(profile?.interests)
+      navigate(completed ? '/home' : '/onboarding', { replace: true })
+    } else {
+      navigate('/home', { replace: true })
+    }
+
+    setLoading(false)
   }
 
   return (

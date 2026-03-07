@@ -1,73 +1,55 @@
 import { useState } from 'react'
-import { Card } from '@/components/ui'
-import { Text } from '@/components/ui'
-import { Button } from '@/components/ui'
-import { Stack } from '@/components/layout'
-import type { Event } from '@/data/mockData'
-import styles from './EventsSidebar.module.css'
+import type { MockEvent } from '@/data/mockData'
+import styles from './Dashboard.module.css'
 
-export interface EventsSidebarProps {
-  events: Event[]
-  selectedEventId?: string | null
-  onSelectEvent?: (id: string) => void
+interface EventsSidebarProps {
+  events: MockEvent[]
 }
 
-export function EventsSidebar({
-  events,
-  selectedEventId = null,
-  onSelectEvent,
-}: EventsSidebarProps) {
-  const [votedId, setVotedId] = useState<string | null>(null)
+export function EventsSidebar({ events }: EventsSidebarProps) {
+  const [votes, setVotes] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {}
+    events.forEach((e) => { init[e.id] = e.userVoted })
+    return init
+  })
 
-  const handleVote = (eventId: string) => {
-    setVotedId(eventId)
-    // Hardcoded - no backend call
+  const [voteCounts, setVoteCounts] = useState<Record<string, number>>(() => {
+    const init: Record<string, number> = {}
+    events.forEach((e) => { init[e.id] = e.votes })
+    return init
+  })
+
+  const toggleVote = (id: string) => {
+    const wasVoted = votes[id]
+    setVotes((v) => ({ ...v, [id]: !wasVoted }))
+    setVoteCounts((c) => ({ ...c, [id]: c[id] + (wasVoted ? -1 : 1) }))
   }
 
+  const sorted = [...events].sort((a, b) => (voteCounts[b.id] ?? 0) - (voteCounts[a.id] ?? 0))
+
   return (
-    <aside className={styles.sidebar}>
-      <Stack gap="md">
-        {events.map((event) => (
-          <Card
-            key={event.id}
-            variant="elevated"
-            className={
-              selectedEventId === event.id ? styles.selected : undefined
-            }
-            onClick={() => onSelectEvent?.(event.id)}
-          >
-            <div className={styles.eventCard}>
-              <Text as="h3" size="md" weight="semibold">
-                {event.name}
-              </Text>
-              <Text as="p" size="sm" color="muted">
-                {event.venue}
-              </Text>
-              <Text as="p" size="xs" color="muted">
-                {new Date(event.dateTime).toLocaleString()}
-              </Text>
-              <Text as="p" size="sm" style={{ marginTop: 'var(--spacing-xs)' }}>
-                {event.description}
-              </Text>
-              <div className={styles.footer}>
-                <Text as="span" size="sm" color="muted">
-                  {event.votes} vote{event.votes !== 1 ? 's' : ''}
-                </Text>
-                <Button
-                  variant={votedId === event.id ? 'primary' : 'outline'}
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleVote(event.id)
-                  }}
-                >
-                  {votedId === event.id ? 'Voted' : 'Vote'}
-                </Button>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </Stack>
-    </aside>
+    <div className={styles.eventsSidebar}>
+      {sorted.map((event, i) => (
+        <div key={event.id} className={styles.eventCard}>
+          <div className={styles.eventRank}>#{i + 1}</div>
+          <div className={styles.eventDetails}>
+            <h3 className={styles.eventName}>{event.name}</h3>
+            <p className={styles.eventVenue}>{event.venue}</p>
+            <p className={styles.eventTime}>{event.dateTime}</p>
+            <p className={styles.eventDesc}>{event.description}</p>
+          </div>
+          <div className={styles.eventVoteArea}>
+            <button
+              type="button"
+              className={`${styles.voteBtn} ${votes[event.id] ? styles.voted : ''}`}
+              onClick={() => toggleVote(event.id)}
+            >
+              {votes[event.id] ? '▲' : '△'}
+            </button>
+            <span className={styles.voteCount}>{voteCounts[event.id]}</span>
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }

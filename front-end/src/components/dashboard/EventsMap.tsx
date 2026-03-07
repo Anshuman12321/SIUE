@@ -1,37 +1,28 @@
-import { useRef, useEffect, useState } from 'react'
-import type { Event } from '@/data/mockData'
-import styles from './EventsMap.module.css'
+import { useEffect, useRef } from 'react'
+import type { MockEvent } from '@/data/mockData'
+import styles from './Dashboard.module.css'
 
-export interface EventsMapProps {
-  events: Event[]
-  selectedEventId?: string | null
-  onSelectEvent?: (id: string) => void
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
+
+interface EventsMapProps {
+  events: MockEvent[]
 }
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN
-
-export function EventsMap({
-  events,
-  selectedEventId = null,
-  onSelectEvent,
-}: EventsMapProps) {
+export function EventsMap({ events }: EventsMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [mapError, setMapError] = useState<string | null>(null)
+  const mapRef = useRef<unknown>(null)
 
   useEffect(() => {
-    if (!MAPBOX_TOKEN || !containerRef.current || events.length === 0) {
-      if (!MAPBOX_TOKEN) {
-        setMapError('Add VITE_MAPBOX_TOKEN to .env for map view')
-      }
-      return
-    }
+    if (!MAPBOX_TOKEN || !containerRef.current || mapRef.current) return
 
-    const loadMap = async () => {
+    let cancelled = false
+
+    ;(async () => {
       try {
         const mapboxgl = (await import('mapbox-gl')).default
+        if (cancelled) return
 
         mapboxgl.accessToken = MAPBOX_TOKEN
-
         const center = events[0]
           ? { lng: events[0].lng, lat: events[0].lat }
           : { lng: -90.2, lat: 38.6 }
@@ -40,41 +31,43 @@ export function EventsMap({
           container: containerRef.current!,
           style: 'mapbox://styles/mapbox/light-v11',
           center: [center.lng, center.lat],
-          zoom: 10,
+          zoom: 11,
         })
 
         events.forEach((event) => {
           const el = document.createElement('div')
-          el.className = styles.marker
-          el.innerHTML = `<span>${event.name}</span>`
-          el.addEventListener('click', () => onSelectEvent?.(event.id))
-
-          new mapboxgl.Marker(el)
+          el.className = styles.marker ?? ''
+          el.textContent = event.name
+          new mapboxgl.Marker({ element: el })
             .setLngLat([event.lng, event.lat])
             .addTo(map)
         })
 
-        return () => map.remove()
-      } catch (err) {
-        setMapError('Failed to load map')
+        mapRef.current = map
+      } catch {
+        // mapbox-gl not available or token missing
       }
-    }
+    })()
 
-    loadMap()
-  }, [events, onSelectEvent])
+    return () => { cancelled = true }
+  }, [events])
 
-  return (
-    <div className={styles.mapContainer}>
-      {mapError || !MAPBOX_TOKEN ? (
-        <div className={styles.placeholder}>
-          <p>{mapError ?? 'Add VITE_MAPBOX_TOKEN to .env for map view'}</p>
-          <p className={styles.hint}>
-            Events: {events.map((e) => e.name).join(', ')}
-          </p>
+  if (!MAPBOX_TOKEN) {
+    return (
+      <div className={styles.mapPlaceholder}>
+        <span className={styles.mapPlaceholderIcon}>🗺️</span>
+        <p>Add <code>VITE_MAPBOX_TOKEN</code> to your <code>.env</code> to enable the map view.</p>
+        <div className={styles.eventPins}>
+          {events.map((e) => (
+            <div key={e.id} className={styles.eventPin}>
+              <span>📍</span>
+              <span>{e.name} — {e.address}</span>
+            </div>
+          ))}
         </div>
-      ) : (
-        <div ref={containerRef} className={styles.map} />
-      )}
-    </div>
-  )
+      </div>
+    )
+  }
+
+  return <div ref={containerRef} className={styles.mapContainer} />
 }

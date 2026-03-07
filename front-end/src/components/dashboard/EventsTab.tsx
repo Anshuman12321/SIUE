@@ -3,23 +3,18 @@ import { EventsSidebar } from './EventsSidebar'
 import { EventsMap } from './EventsMap'
 import { VotingTimer } from './VotingTimer'
 import { FinalEventCard } from './FinalEventCard'
-import { Flex } from '@/components/layout'
-import { Text } from '@/components/ui'
-import styles from './EventsTab.module.css'
+import styles from './Dashboard.module.css'
 
 export function EventsTab() {
   const isFinalized = MOCK_GROUP.eventFinalized
 
   if (isFinalized) {
     return (
-      <div className={styles.finalized}>
-        <div className={styles.celebration}>
-          <Text as="h2" size="2xl" weight="bold" color="primary">
-            Event chosen!
-          </Text>
-          <Text as="p" size="md" color="muted">
-            Your group has decided. Here are the details.
-          </Text>
+      <div className={styles.finalizedView}>
+        <div className={styles.celebrationHeader}>
+          <span className={styles.celebrationEmoji}>🎊</span>
+          <h2 className={styles.sectionTitle}>Event Chosen!</h2>
+          <p className={styles.sectionSubtitle}>Your group has decided. Here are the details.</p>
         </div>
         <FinalEventCard event={MOCK_FINAL_EVENT} />
       </div>
@@ -27,14 +22,15 @@ export function EventsTab() {
   }
 
   return (
-    <div className={styles.voting}>
-      <Flex justify="between" align="center" className={styles.header}>
-        <Text as="h2" size="lg" weight="semibold">
-          Vote for an event
-        </Text>
+    <div>
+      <div className={styles.eventsHeader}>
+        <div>
+          <h2 className={styles.sectionTitle}>Vote for an Event</h2>
+          <p className={styles.sectionSubtitle}>Upvote the events you'd like to do with your group.</p>
+        </div>
         <VotingTimer endsAt={MOCK_GROUP.votingEndsAt} />
-      </Flex>
-      <div className={styles.layout}>
+      </div>
+      <div className={styles.eventsLayout}>
         <EventsSidebar events={MOCK_EVENTS} />
         <EventsMap events={MOCK_EVENTS} />
       </div>

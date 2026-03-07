@@ -1,28 +1,21 @@
 import { useState, useEffect } from 'react'
-import { Text } from '@/components/ui'
-import styles from './VotingTimer.module.css'
+import styles from './Dashboard.module.css'
 
 export interface VotingTimerProps {
   endsAt: string
 }
 
 export function VotingTimer({ endsAt }: VotingTimerProps) {
-  const [remaining, setRemaining] = useState<string>('')
+  const [remaining, setRemaining] = useState('')
 
   useEffect(() => {
     const update = () => {
-      const end = new Date(endsAt).getTime()
-      const now = Date.now()
-      const diff = end - now
+      const diff = new Date(endsAt).getTime() - Date.now()
+      if (diff <= 0) { setRemaining('Voting ended'); return }
 
-      if (diff <= 0) {
-        setRemaining('Voting ended')
-        return
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const days = Math.floor(diff / 86400000)
+      const hours = Math.floor((diff % 86400000) / 3600000)
+      const mins = Math.floor((diff % 3600000) / 60000)
 
       const parts: string[] = []
       if (days > 0) parts.push(`${days}d`)
@@ -32,18 +25,15 @@ export function VotingTimer({ endsAt }: VotingTimerProps) {
     }
 
     update()
-    const id = setInterval(update, 60000)
+    const id = setInterval(update, 60_000)
     return () => clearInterval(id)
   }, [endsAt])
 
   return (
-    <div className={styles.timer}>
-      <Text as="span" size="sm" color="muted">
-        Voting ends in:{' '}
-      </Text>
-      <Text as="span" size="sm" weight="semibold">
-        {remaining}
-      </Text>
+    <div className={styles.timerBadge}>
+      <span className={styles.timerDot} />
+      <span className={styles.timerLabel}>Voting ends in</span>
+      <span className={styles.timerValue}>{remaining}</span>
     </div>
   )
 }

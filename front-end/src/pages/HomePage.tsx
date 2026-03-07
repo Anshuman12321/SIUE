@@ -1,84 +1,80 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { Button, Text, SegmentedControl } from '@/components/ui'
-import { PageLayout, Stack, Flex } from '@/components/layout'
-import { MOCK_USER_MATCHED } from '@/data/mockData'
-import { MatchRevealAnimation } from '@/components/dashboard/MatchRevealAnimation'
-import { GroupMembersTab } from '@/components/dashboard/GroupMembersTab'
-import { EventsTab } from '@/components/dashboard/EventsTab'
+import { MOCK_USER_MATCHED, MOCK_GROUP } from '@/data/mockData'
+import {
+  SegmentedControl,
+  NotMatchedView,
+  GroupMembersTab,
+  EventsTab,
+} from '@/components/dashboard'
+import type { Segment } from '@/components/dashboard'
+import styles from '@/components/dashboard/Dashboard.module.css'
 
-type TabId = 'members' | 'events'
+const TABS: Segment[] = [
+  { id: 'members', label: 'Group Members', icon: '👥' },
+  { id: 'events', label: 'Events', icon: '🎯' },
+]
 
 export function HomePage() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
-  const [showMatchAnimation, setShowMatchAnimation] = useState(true)
-  const [activeTab, setActiveTab] = useState<TabId>('members')
+  const [activeTab, setActiveTab] = useState('members')
 
-  const handleAnimationComplete = () => {
-    setShowMatchAnimation(false)
-  }
-
-  if (!MOCK_USER_MATCHED) {
-    return (
-      <PageLayout maxWidth="lg">
-        <Stack gap="xl" align="center">
-          <div
-            style={{
-              textAlign: 'center',
-              padding: 'var(--spacing-3xl)',
-              maxWidth: 400,
-            }}
-          >
-            <Text as="h1" size="2xl" weight="bold" style={{ marginBottom: 'var(--spacing-md)' }}>
-              Check back later
-            </Text>
-            <Text as="p" size="md" color="muted" style={{ marginBottom: 'var(--spacing-xl)' }}>
-              You'll be notified when a matched group has been made for you.
-            </Text>
-            <Button variant="primary" size="lg" onClick={() => navigate('/preferences')}>
-              Edit Preferences
-            </Button>
-          </div>
-          <Button variant="ghost" onClick={() => signOut()}>
-            Log out
-          </Button>
-        </Stack>
-      </PageLayout>
-    )
-  }
-
-  if (showMatchAnimation) {
-    return (
-      <MatchRevealAnimation onComplete={handleAnimationComplete} />
-    )
-  }
+  const initial = user?.email?.charAt(0).toUpperCase() ?? '?'
+  const isMatched = MOCK_USER_MATCHED
 
   return (
-    <PageLayout maxWidth="xl">
-      <Stack gap="xl">
-        <Flex justify="between" align="center">
-          <Text as="h1" size="xl" weight="bold">
-            Your Group
-          </Text>
-          <Button variant="ghost" onClick={() => signOut()}>
+    <div className={styles.dashboard}>
+      <div className={styles.topBar}>
+        <span className={styles.topBarLogo}>Connect</span>
+        <div className={styles.topBarRight}>
+          <button
+            type="button"
+            className={styles.topBarBtn}
+            onClick={() => navigate('/preferences')}
+          >
+            Preferences
+          </button>
+          <button
+            type="button"
+            className={styles.topBarBtn}
+            onClick={() => signOut()}
+          >
             Log out
-          </Button>
-        </Flex>
+          </button>
+          <div className={styles.topBarAvatar}>{initial}</div>
+        </div>
+      </div>
 
-        <SegmentedControl
-          options={[
-            { id: 'members', label: 'Group Members' },
-            { id: 'events', label: 'Events' },
-          ]}
-          value={activeTab}
-          onChange={(id) => setActiveTab(id as TabId)}
-        />
+      <div className={styles.dashContent}>
+        <div className={styles.dashWelcome}>
+          <h1>Hey, {user?.email?.split('@')[0] ?? 'there'} 👋</h1>
+          {isMatched ? (
+            <p>You're matched with <strong>{MOCK_GROUP.name}</strong>. Explore your group and vote on events!</p>
+          ) : (
+            <p>Hang tight — we're finding the perfect group for you.</p>
+          )}
+        </div>
 
-        {activeTab === 'members' && <GroupMembersTab />}
-        {activeTab === 'events' && <EventsTab />}
-      </Stack>
-    </PageLayout>
+        {!isMatched ? (
+          <div className={styles.tabPanel}>
+            <NotMatchedView />
+          </div>
+        ) : (
+          <>
+            <SegmentedControl
+              segments={TABS}
+              active={activeTab}
+              onChange={setActiveTab}
+            />
+            <div className={styles.tabPanel}>
+              {activeTab === 'members' && <GroupMembersTab />}
+              {activeTab === 'events' && <EventsTab />}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   )
 }
