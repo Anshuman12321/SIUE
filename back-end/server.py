@@ -188,7 +188,7 @@ def google_calendar_callback(code: str, state: str):
 @app.get("/users/{user_id}/calendar-status", response_model=CalendarStatusResponse)
 def calendar_status(user_id: UUID):
     connected = check_calendar_connected(str(user_id))
-    return CalendarStatusResponse(connected=connected)
+    return CalendarStatusResponse(connected=connected, provider="google" if connected else None)
 
 
 # ── Calendar Availability ─────────────────────────────────────────

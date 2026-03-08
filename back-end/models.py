@@ -37,3 +37,17 @@ class DeclineGroupRequest(BaseModel):
 
 class PlaceCallRequest(BaseModel):
     phone_number: str
+
+
+class CalendarStatusResponse(BaseModel):
+    connected: bool
+    provider: str | None = None
+
+
+class CalendarSyncResponse(BaseModel):
+    blocks_synced: int
+
+
+class AvailabilityResponse(BaseModel):
+    user_id: str
+    busy_blocks: list[dict]
