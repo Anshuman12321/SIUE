@@ -2,12 +2,30 @@ from collections import Counter
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from database import get_db
 from embeddings import get_embedding
-from models import DeclineGroupRequest, UpdatePreferencesRequest
+from models import DeclineGroupRequest, ParseVibeRequest, ParseVibeResponse, UpdatePreferencesRequest
+from vibe_parser import parse_vibe
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.post("/parse-vibe", response_model=ParseVibeResponse)
+def parse_vibe_endpoint(body: ParseVibeRequest):
+    try:
+        result = parse_vibe(body.raw_text)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Gemini API error: {e}")
+    return result
 
 
 @app.post("/users/{user_id}/preferences")
