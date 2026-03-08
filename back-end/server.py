@@ -40,10 +40,13 @@ def process_vibe(user_id: UUID):
 
     embedding = get_embedding(parsed.vibe, parsed.activity_types)
 
+    DEFAULT_LAT, DEFAULT_LNG = 38.631079304478895, -90.1932472121037
     loc = interests.get("location", {})
     lat, lng = loc.get("lat"), loc.get("lng")
     if lat is None or lng is None:
         raise HTTPException(status_code=400, detail="No location found")
+    if lat == 0 and lng == 0:
+        lat, lng = DEFAULT_LAT, DEFAULT_LNG
     location_wkt = f"POINT({lng} {lat})"
 
     interests["activity_types"] = parsed.activity_types
