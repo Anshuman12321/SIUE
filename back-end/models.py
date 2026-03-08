@@ -33,3 +33,23 @@ class ParseVibeResponse(BaseModel):
 
 class DeclineGroupRequest(BaseModel):
     user_id: UUID
+
+
+class CalendarStatusResponse(BaseModel):
+    connected: bool
+    provider: str = "google"
+
+
+class CalendarSyncResponse(BaseModel):
+    blocks_synced: int
+
+
+class BusyBlock(BaseModel):
+    busy_start: str
+    busy_end: str
+    synced_at: str
+
+
+class AvailabilityResponse(BaseModel):
+    user_id: str
+    busy_blocks: list[BusyBlock]
