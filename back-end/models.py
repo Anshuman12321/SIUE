@@ -19,5 +19,17 @@ class UpdatePreferencesRequest(BaseModel):
     preferences: UserPreferences
 
 
+class ParseVibeRequest(BaseModel):
+    raw_text: str
+
+
+class ParseVibeResponse(BaseModel):
+    vibe: str
+    activity_types: list[str]
+    alcohol: bool
+    budget_min: int
+    budget_max: int
+
+
 class DeclineGroupRequest(BaseModel):
     user_id: UUID
