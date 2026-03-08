@@ -176,13 +176,16 @@ export function EventsTab({ groupId, currentUserId }: EventsTabProps) {
           .eq('id', groupId)
 
         try {
-          await fetch(`${API_BASE}/calls/place`, {
+          const callPayload = { event_id: winnerId, caller_name: currentUserName }
+          console.log('[EventsTab] Calling /calls/place with:', callPayload)
+          const callRes = await fetch(`${API_BASE}/calls/place`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event_id: winnerId, name: currentUserName }),
+            body: JSON.stringify(callPayload),
           })
-        } catch {
-          // reservation call may fail; continue
+          console.log('[EventsTab] /calls/place response:', callRes.status, await callRes.text())
+        } catch (err) {
+          console.error('[EventsTab] /calls/place failed:', err)
         }
 
         try {

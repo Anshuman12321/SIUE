@@ -21,6 +21,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -66,6 +67,30 @@ def process_vibe(user_id: UUID):
 @app.post("/jobs/matchmaker")
 def run_matchmaker():
     db = get_db()
+
+    # Test group: force these three users together
+    TEST_GROUP = [
+        "099d2109-268b-43f2-b078-bf04e1d9b3d7",
+        "726bebe2-c61a-4cdf-9e07-a17a9cb1ad6d",
+        "c388089d-b59a-4aa2-864a-2770b20246b9",
+    ]
+    # Check if all three are still unmatched
+    hc_rows = db.table("users").select("id,group_id").in_("id", TEST_GROUP).execute()
+    hc_users = {row["id"]: row["group_id"] for row in (hc_rows.data or [])}
+    all_lonely = len(hc_users) == 3 and all(gid is None for gid in hc_users.values())
+    if all_lonely:
+        print(f"[matchmaker] Test group: all 3 users are lonely, creating group")
+        group_result = db.table("groups").insert({"members": TEST_GROUP}).execute()
+        new_group_id = group_result.data[0]["id"]
+        db.table("users").update({"group_id": new_group_id}).in_("id", TEST_GROUP).execute()
+        try:
+            generate_events_for_group(new_group_id)
+            print(f"[matchmaker] Events generated for test group {new_group_id}")
+        except Exception as exc:
+            print(f"[matchmaker] Event generation failed for test group {new_group_id}: {exc}")
+            import traceback
+            traceback.print_exc()
+        return {"groups_created": 1, "lonely_users_processed": 3}
 
     result = db.rpc("get_lonely_users", {"max_groups": 1}).execute()
     lonely = result.data or []
@@ -143,8 +168,8 @@ def run_matchmaker():
         ][:3]
         print(f"[matchmaker] {len(available_candidates)} candidates passed free-time filter")
 
-        if not available_candidates:
-            print(f"[matchmaker] No available candidates for {uid}, skipping")
+        if len(available_candidates) < 2:
+            print(f"[matchmaker] Not enough candidates for {uid} (need at least 2, got {len(available_candidates)}), skipping")
             continue
 
         member_ids = [uid] + [c["user_id"] for c in available_candidates]
