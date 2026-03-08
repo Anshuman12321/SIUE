@@ -67,7 +67,8 @@ def search_nearby_places(
             "places.types,"
             "places.id,"
             "places.primaryType,"
-            "places.editorialSummary"
+            "places.editorialSummary,"
+            "places.nationalPhoneNumber"
         ),
     }
 
@@ -98,5 +99,6 @@ def search_nearby_places(
             "types": p.get("types", []),
             "primary_type": p.get("primaryType", ""),
             "summary": p.get("editorialSummary", {}).get("text", ""),
+            "phone_number": p.get("nationalPhoneNumber", ""),
         })
     return places

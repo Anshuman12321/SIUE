@@ -76,6 +76,7 @@ class EventResponse(BaseModel):
     address: str | None
     date_time: str
     description: str | None = None
+    phone_number: str | None = None
     group_id: int
 
 
