@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     google_redirect_uri: str = "http://localhost:8000/auth/google/calendar/callback"
     google_places_api_key: str = ""
 
-    model_config = {"env_file": ".env"}
+    model_config = {"env_file": ".env", "extra": "ignore"}
 
 
 @lru_cache
