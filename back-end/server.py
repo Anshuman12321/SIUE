@@ -8,9 +8,11 @@ from fastapi.responses import RedirectResponse
 from calendar_sync import sync_availability, users_share_free_time
 from database import get_db
 from embeddings import get_embedding
-from vapi import create_call, poll_call_until_done
+from event_generator import generate_events_for_group
 from google_auth import build_authorization_url, check_calendar_connected, exchange_code_for_tokens, save_tokens
-from models import AvailabilityResponse, CalendarStatusResponse, CalendarSyncResponse, DeclineGroupRequest, ParseVibeRequest, ParseVibeResponse, UpdatePreferencesRequest, DeclineGroupRequest, PlaceCallRequest, UpdatePreferencesRequest
+from models import AvailabilityResponse, CalendarStatusResponse, CalendarSyncResponse, DeclineGroupRequest, GenerateEventsResponse, PlaceCallRequest, PlaceDiscoveryResponse, UpdatePreferencesRequest
+from places import search_nearby_places
+from vapi import create_call, poll_call_until_done
 from vibe_parser import parse_vibe
 
 app = FastAPI()
@@ -216,3 +218,60 @@ def get_availability(user_id: UUID):
         .execute()
     )
     return AvailabilityResponse(user_id=str(user_id), busy_blocks=result.data)
+
+
+# ── Event Generation ─────────────────────────────────────────────
+
+
+@app.get("/groups/{group_id}/places", response_model=PlaceDiscoveryResponse)
+def discover_places(group_id: int):
+    """Find places near the group's centroid based on members' activity preferences."""
+    db = get_db()
+
+    group_row = db.table("groups").select("members").eq("id", group_id).single().execute()
+    if not group_row.data:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    member_ids = group_row.data["members"]
+    all_activity_types: list[str] = []
+
+    for uid in member_ids:
+        user_row = db.table("users").select("interests").eq("id", uid).single().execute()
+        if not user_row.data:
+            continue
+        all_activity_types.extend(user_row.data["interests"].get("activity_types", []))
+
+    # Get centroid via PostGIS
+    centroid_result = db.rpc("get_group_centroid", {"p_group_id": group_id}).execute()
+    if not centroid_result.data:
+        raise HTTPException(status_code=400, detail="No member locations found")
+
+    centroid = centroid_result.data[0]
+    centroid_lat = centroid["lat"]
+    centroid_lng = centroid["lng"]
+
+    unique_activities = list(set(all_activity_types))
+    places = search_nearby_places(centroid_lat, centroid_lng, unique_activities)
+
+    return PlaceDiscoveryResponse(
+        centroid_lat=centroid_lat,
+        centroid_lng=centroid_lng,
+        places=places,
+    )
+
+
+@app.post("/groups/{group_id}/generate-events", response_model=GenerateEventsResponse)
+def generate_events(group_id: int):
+    """Generate 3 event suggestions for a group and store them in the events table."""
+    try:
+        events = generate_events_for_group(group_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Event generation failed: {e}")
+
+    return GenerateEventsResponse(
+        group_id=group_id,
+        events_created=len(events),
+        events=events,
+    )
