@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { useUserProfile } from '@/hooks/useUserProfile'
 import { MOCK_USER_MATCHED, MOCK_GROUP } from '@/data/mockData'
 import {
   SegmentedControl,
@@ -18,10 +19,12 @@ const TABS: Segment[] = [
 
 export function HomePage() {
   const { user, signOut } = useAuth()
+  const { profile } = useUserProfile(user ?? null)
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('members')
 
   const initial = user?.email?.charAt(0).toUpperCase() ?? '?'
+  const avatarUrl = profile?.avatar_url
   const isMatched = MOCK_USER_MATCHED
 
   return (
@@ -43,7 +46,11 @@ export function HomePage() {
           >
             Log out
           </button>
-          <div className={styles.topBarAvatar}>{initial}</div>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="Avatar" className={styles.topBarAvatarImg} />
+          ) : (
+            <div className={styles.topBarAvatar}>{initial}</div>
+          )}
         </div>
       </div>
 
