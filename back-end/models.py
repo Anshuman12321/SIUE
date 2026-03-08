@@ -21,3 +21,7 @@ class UpdatePreferencesRequest(BaseModel):
 
 class DeclineGroupRequest(BaseModel):
     user_id: UUID
+
+
+class PlaceCallRequest(BaseModel):
+    phone_number: str

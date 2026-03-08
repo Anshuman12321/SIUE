@@ -2,12 +2,21 @@ from collections import Counter
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from database import get_db
 from embeddings import get_embedding
-from models import DeclineGroupRequest, UpdatePreferencesRequest
+from models import DeclineGroupRequest, PlaceCallRequest, UpdatePreferencesRequest
+from vapi import create_call, poll_call_until_done
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.post("/users/{user_id}/preferences")
@@ -109,3 +118,29 @@ def decline_group(group_id: int, body: DeclineGroupRequest):
         "p_user_id": str(body.user_id),
     }).execute()
     return {"status": "ok"}
+
+
+@app.post("/calls/place")
+def place_call(body: PlaceCallRequest):
+    """Place an outbound AI agent call and return the structured output."""
+    try:
+        call = create_call(body.phone_number)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to create Vapi call: {exc}")
+
+    call_id = call["id"]
+
+    try:
+        result = poll_call_until_done(call_id)
+    except TimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Error polling call status: {exc}")
+
+    structured_data = (result.get("analysis") or {}).get("structuredData")
+
+    return {
+        "call_id": call_id,
+        "status": result.get("status"),
+        "structured_data": structured_data,
+    }
