@@ -21,10 +21,10 @@ The result: more scrolling, fewer real hangouts.
 **Connect** is an end-to-end platform that:
 
 1. **Matches you with compatible people** using your interests, location, budget, and preferences—and only pairs you with users who share at least one **2+ hour free window** in the next 7 days (via Google Calendar).
-2. **Puts you in small groups** (e.g. 3–4 people) so you can see who you’re matched with and coordinate.
+2. **Puts you in small groups** (ex. 3–4 people) so you can see who you’re matched with and coordinate.
 3. **Lets you vote on events** as a group, with a timer and a map of candidate activities.
 4. **Stores everything in Supabase**—users, profiles, groups, calendar tokens, availability—so the dashboard always reflects live data from the database.
-5. **Optionally places an AI call** (“Riley”) to a phone number for reservations or confirmations, with structured results shown in the app.
+5. **Places an AI call** (“Riley”) to a phone number for reservations or confirmations, with structured results shown in the app.
 
 Data throughout the app—group membership, events, availability, preferences—is **pulled from Supabase** (and, where applicable, from the backend API that reads/writes Supabase). The frontend displays groups and events that come from the database and from the matchmaker job.
 
@@ -38,7 +38,7 @@ Data throughout the app—group membership, events, availability, preferences—
 - **Onboarding (multi-step):**
   - Name, avatar (upload to Supabase Storage `avatars` bucket), short bio.
   - Two prompt/response pairs (e.g. “A perfect weekend looks like…”).
-  - **Location** via browser geolocation + Mapbox Geocoder reverse lookup for a human-readable label.
+  - **Location** via browser geolocation + Mapbox Geocoder reverse lookup for a readable label.
   - **Google Calendar connect** via OAuth: user is sent to Google, authorizes read-only calendar access, then is redirected back; the backend exchanges the code for tokens and stores them in Supabase (`calendar_tokens`). An initial availability sync runs and writes busy blocks to `user_availability`.
   - **Vibe:** free-form text describing what they want to do; optional **vibe parsing** (see Tools) can structure this.
 - Onboarding completion is saved to **Supabase**: `users` table is updated with name, bio, prompts, interests, and avatar URL. Profile and completion status are read from Supabase.
