@@ -86,6 +86,7 @@ class GeneratedEvent(BaseModel):
     lng: float
     date_time: str  # ISO 8601
     description: str
+    phone_number: str | None = None
 
 
 class GeneratedEvents(BaseModel):
@@ -100,7 +101,7 @@ You are an event planner for a social group. Given:
 4. Nearby places discovered via Google Places
 
 Create exactly 3 diverse event suggestions. Each event must:
-- Use one of the provided places (use its exact name, address, lat, lng)
+- Use one of the provided places (use its exact name, address, lat, lng, and phone_number)
 - Be scheduled during one of the free time windows
 - Pick a reasonable specific date/time within a free window \
 (not at midnight, prefer afternoons/evenings for social events, mornings for outdoor activities)
@@ -138,6 +139,8 @@ def _build_gemini_prompt(
     parts.append("\n## Nearby Places")
     for p in places:
         desc = f"- {p['display_name']} ({p['primary_type']}): {p['address']}"
+        if p.get("phone_number"):
+            desc += f" (Phone: {p['phone_number']})"
         if p.get("summary"):
             desc += f" -- {p['summary']}"
         desc += f" [lat={p['lat']}, lng={p['lng']}]"
@@ -231,6 +234,7 @@ def generate_events_for_group(group_id: int) -> list[dict]:
             "date_time": ev.date_time,
             "location": location_wkt,
             "description": ev.description,
+            "phone_number": ev.phone_number,
         })
 
     result = db.table("events").insert(event_rows).execute()
