@@ -1,9 +1,9 @@
-import type { MockMember } from '@/data/mockData'
+import type { DisplayMember } from '@/lib/types'
 import styles from './Dashboard.module.css'
 
 interface MemberCardProps {
-  member: MockMember
-  onClick: (member: MockMember) => void
+  member: DisplayMember
+  onClick: (member: DisplayMember) => void
 }
 
 export function MemberCard({ member, onClick }: MemberCardProps) {
@@ -22,7 +22,7 @@ export function MemberCard({ member, onClick }: MemberCardProps) {
       </div>
       <div className={styles.memberInfo}>
         <span className={styles.memberName}>{member.name}</span>
-        <span className={styles.memberAge}>{member.age}</span>
+        {member.age != null && <span className={styles.memberAge}>{member.age}</span>}
       </div>
       <p className={styles.memberBio}>{member.bio}</p>
     </button>

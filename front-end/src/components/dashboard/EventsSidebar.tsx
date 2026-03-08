@@ -1,24 +1,24 @@
-import type { MockEvent } from '@/data/mockData'
-import { MOCK_CURRENT_USER_ID } from '@/data/mockData'
+import type { DisplayEvent, EventVoter } from '@/lib/types'
 import styles from './Dashboard.module.css'
 
 const MAX_VISIBLE_AVATARS = 4
 
 interface EventsSidebarProps {
-  events: MockEvent[]
+  events: DisplayEvent[]
   selectedId: string | null
   onSelect: (id: string) => void
   lockedEventId: string | null
+  currentUserId: string
 }
 
-export function EventsSidebar({ events, selectedId, onSelect, lockedEventId }: EventsSidebarProps) {
+export function EventsSidebar({ events, selectedId, onSelect, lockedEventId, currentUserId }: EventsSidebarProps) {
   return (
     <div className={styles.eventsSidebar}>
       {events.map((event) => {
         const isSelected = selectedId === event.id
         const isLocked = lockedEventId === event.id
         const isMuted = lockedEventId !== null && lockedEventId !== event.id
-        const currentUserVotedHere = event.voters.some((v) => v.id === MOCK_CURRENT_USER_ID)
+        const currentUserVotedHere = event.voters.some((v) => v.id === currentUserId)
 
         const cardClass = [
           styles.eventCard,
@@ -62,7 +62,7 @@ export function EventsSidebar({ events, selectedId, onSelect, lockedEventId }: E
   )
 }
 
-function VoterAvatars({ voters }: { voters: MockEvent['voters'] }) {
+function VoterAvatars({ voters }: { voters: EventVoter[] }) {
   if (voters.length === 0) {
     return (
       <div className={styles.voterRow}>

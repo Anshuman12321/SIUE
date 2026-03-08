@@ -1,8 +1,8 @@
-import type { MockMember } from '@/data/mockData'
+import type { DisplayMember } from '@/lib/types'
 import styles from './Dashboard.module.css'
 
 interface MemberProfileModalProps {
-  member: MockMember
+  member: DisplayMember
   onClose: () => void
 }
 
@@ -22,7 +22,7 @@ export function MemberProfileModal({ member, onClose }: MemberProfileModalProps)
           />
           <div className={styles.profileNameRow}>
             <h2 className={styles.profileName}>{member.name}</h2>
-            <span className={styles.profileAge}>{member.age}</span>
+            {member.age != null && <span className={styles.profileAge}>{member.age}</span>}
           </div>
           <p className={styles.profileBio}>{member.bio}</p>
         </div>
