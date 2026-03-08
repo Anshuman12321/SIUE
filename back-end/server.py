@@ -5,10 +5,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
+from calendar_sync import sync_availability
 from database import get_db
 from embeddings import get_embedding
 from google_auth import build_authorization_url, check_calendar_connected, exchange_code_for_tokens, save_tokens
-from models import CalendarStatusResponse, DeclineGroupRequest, ParseVibeRequest, ParseVibeResponse, UpdatePreferencesRequest
+from models import AvailabilityResponse, CalendarStatusResponse, CalendarSyncResponse, DeclineGroupRequest, ParseVibeRequest, ParseVibeResponse, UpdatePreferencesRequest
 from vibe_parser import parse_vibe
 
 app = FastAPI()
@@ -147,6 +148,13 @@ def google_calendar_callback(code: str, state: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Token exchange failed: {e}")
     save_tokens(state, tokens)
+
+    # Trigger initial availability sync (non-fatal if it fails)
+    try:
+        sync_availability(state)
+    except Exception:
+        pass
+
     return RedirectResponse("http://localhost:5173/home?calendar=connected")
 
 
@@ -154,3 +162,30 @@ def google_calendar_callback(code: str, state: str):
 def calendar_status(user_id: UUID):
     connected = check_calendar_connected(str(user_id))
     return CalendarStatusResponse(connected=connected)
+
+
+# ── Calendar Availability ─────────────────────────────────────────
+
+
+@app.post("/users/{user_id}/calendar/sync", response_model=CalendarSyncResponse)
+def sync_calendar(user_id: UUID):
+    try:
+        result = sync_availability(str(user_id))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Calendar sync failed: {e}")
+    return result
+
+
+@app.get("/users/{user_id}/availability", response_model=AvailabilityResponse)
+def get_availability(user_id: UUID):
+    db = get_db()
+    result = (
+        db.table("user_availability")
+        .select("busy_start, busy_end, synced_at")
+        .eq("user_id", str(user_id))
+        .order("busy_start")
+        .execute()
+    )
+    return AvailabilityResponse(user_id=str(user_id), busy_blocks=result.data)

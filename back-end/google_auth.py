@@ -80,8 +80,40 @@ def check_calendar_connected(user_id: str) -> bool:
 
 
 def refresh_access_token(user_id: str) -> str | None:
-    """Refresh the access token using the stored refresh token.
+    """Return a valid access token, refreshing it if expired."""
+    db = get_db()
+    settings = get_settings()
 
-    Skeleton for Branch 2 — not yet implemented.
-    """
-    return None
+    result = (
+        db.table("calendar_tokens")
+        .select("access_token, refresh_token, token_expiry")
+        .eq("user_id", user_id)
+        .eq("provider", "google")
+        .single()
+        .execute()
+    )
+    if not result.data:
+        return None
+
+    row = result.data
+
+    from google.auth.transport.requests import Request
+    from google.oauth2.credentials import Credentials
+
+    creds = Credentials(
+        token=row["access_token"],
+        refresh_token=row["refresh_token"],
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=settings.google_client_id,
+        client_secret=settings.google_client_secret,
+    )
+
+    if creds.expired or creds.token is None:
+        creds.refresh(Request())
+        db.table("calendar_tokens").update({
+            "access_token": creds.token,
+            "token_expiry": creds.expiry.isoformat() if creds.expiry else datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("user_id", user_id).eq("provider", "google").execute()
+
+    return creds.token
