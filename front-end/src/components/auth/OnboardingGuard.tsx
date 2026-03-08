@@ -36,9 +36,5 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
     return <Navigate to="/onboarding" replace />
   }
 
-  if (!profile?.group_id) {
-    return <Navigate to="/waiting" replace />
-  }
-
   return <>{children}</>
 }
