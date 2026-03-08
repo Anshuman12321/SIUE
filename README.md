@@ -21,7 +21,7 @@ The result: more scrolling, fewer real hangouts.
 **Connect** is an end-to-end platform that:
 
 1. **Matches you with compatible people** using your interests, location, budget, and preferences—and only pairs you with users who share at least one **2+ hour free window** in the next 7 days (via Google Calendar).
-2. **Puts you in small groups** (ex. 3–4 people) so you can see who you’re matched with and coordinate.
+2. **Puts you in small groups** (e.g. 3–4 people) so you can see who you’re matched with and coordinate.
 3. **Lets you vote on events** as a group, with a timer and a map of candidate activities.
 4. **Stores everything in Supabase**—users, profiles, groups, calendar tokens, availability—so the dashboard always reflects live data from the database.
 5. **Places an AI call** (“Riley”) to a phone number for reservations or confirmations, with structured results shown in the app.
@@ -38,7 +38,7 @@ Data throughout the app—group membership, events, availability, preferences—
 - **Onboarding (multi-step):**
   - Name, avatar (upload to Supabase Storage `avatars` bucket), short bio.
   - Two prompt/response pairs (e.g. “A perfect weekend looks like…”).
-  - **Location** via browser geolocation + Mapbox Geocoder reverse lookup for a readable label.
+  - **Location** via browser geolocation + Mapbox Geocoder reverse lookup for a human-readable label.
   - **Google Calendar connect** via OAuth: user is sent to Google, authorizes read-only calendar access, then is redirected back; the backend exchanges the code for tokens and stores them in Supabase (`calendar_tokens`). An initial availability sync runs and writes busy blocks to `user_availability`.
   - **Vibe:** free-form text describing what they want to do; optional **vibe parsing** (see Tools) can structure this.
 - Onboarding completion is saved to **Supabase**: `users` table is updated with name, bio, prompts, interests, and avatar URL. Profile and completion status are read from Supabase.
@@ -120,8 +120,6 @@ SIUE/
 │   ├── vapi.py                # Create call, poll until done
 │   ├── models.py              # Pydantic request/response models
 │   └── pyproject.toml
-├── docker-compose.yml         # backend + frontend (nginx) containers
-├── DEPLOY.md                  # Docker & Vultr deployment steps
 └── README.md                  # This file
 ```
 
@@ -159,8 +157,6 @@ All group and event data displayed in the dashboard are **loaded from Supabase**
 - **Backend** (`.env` in `back-end/`): Supabase URL and key, Gemini API key, Google OAuth client id/secret/redirect_uri, Google Places (optional), Vapi API key and assistant id, Twilio credentials. Optional: `ALLOWED_ORIGINS` for CORS.
 - **Frontend** (`.env` in `front-end/`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL` (backend base URL), `VITE_MAPBOX_TOKEN`, `VITE_VAPI_PUBLIC_KEY`, `VITE_VAPI_ASSISTANT_ID` (if using Vapi from client).
 
-For production and Docker, see **DEPLOY.md**.
-
 ---
 
 ## Running Locally
@@ -168,8 +164,6 @@ For production and Docker, see **DEPLOY.md**.
 1. **Supabase:** Create a project, run migrations (RLS, calendar_tokens, user_availability), create `users`/`groups` and RPCs if not already present. Configure Auth and Storage (avatars).
 2. **Backend:** From `back-end/`, create `.env`, then run `uv run python main.py` (or `uvicorn server:app --reload --port 8000`).
 3. **Frontend:** From `front-end/`, create `.env` with Vite vars, then `npm install` and `npm run dev`. Open the app and use the backend URL for API and OAuth redirect.
-
-For containerized run and Vultr hosting, follow **DEPLOY.md**.
 
 ---
 
