@@ -36,7 +36,8 @@ class DeclineGroupRequest(BaseModel):
 
 
 class PlaceCallRequest(BaseModel):
-    phone_number: str
+    event_id: int
+    caller_name: str
 
 
 class CalendarStatusResponse(BaseModel):
