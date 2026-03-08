@@ -1,4 +1,3 @@
-from collections import Counter
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
@@ -10,7 +9,7 @@ from database import get_db
 from embeddings import get_embedding
 from event_generator import generate_events_for_group
 from google_auth import build_authorization_url, check_calendar_connected, exchange_code_for_tokens, save_tokens
-from models import AvailabilityResponse, CalendarStatusResponse, CalendarSyncResponse, DeclineGroupRequest, GenerateEventsResponse, PlaceCallRequest, PlaceDiscoveryResponse, UpdatePreferencesRequest
+from models import AvailabilityResponse, CalendarStatusResponse, CalendarSyncResponse, DeclineGroupRequest, PlaceCallRequest, PlaceDiscoveryResponse
 from places import search_nearby_places
 from vapi import create_call, poll_call_until_done
 from vibe_parser import parse_vibe
@@ -25,23 +24,38 @@ app.add_middleware(
 )
 
 
-@app.post("/users/{user_id}/preferences")
-def update_preferences(user_id: UUID, body: UpdatePreferencesRequest):
-    p = body.preferences
-    embedding = get_embedding(p.vibe, p.activity_types)
+@app.post("/users/{user_id}/process-vibe")
+def process_vibe(user_id: UUID):
     db = get_db()
+    row = db.table("users").select("interests").eq("id", str(user_id)).single().execute()
+    if not row.data or not row.data.get("interests"):
+        raise HTTPException(status_code=400, detail="No interests found")
 
-    prefs_json = p.model_dump()
-    location_wkt = f"POINT({p.lng} {p.lat})"
+    interests = row.data["interests"]
+    raw_vibe = interests.get("vibe", "")
+    if not raw_vibe:
+        raise HTTPException(status_code=400, detail="No vibe text found")
 
-    db.table("users").upsert({
-        "id": str(user_id),
-        "interests": prefs_json,
+    parsed = parse_vibe(raw_vibe)
+
+    embedding = get_embedding(parsed.vibe, parsed.activity_types)
+
+    loc = interests.get("location", {})
+    lat, lng = loc.get("lat"), loc.get("lng")
+    if lat is None or lng is None:
+        raise HTTPException(status_code=400, detail="No location found")
+    location_wkt = f"POINT({lng} {lat})"
+
+    interests["activity_types"] = parsed.activity_types
+    interests["parsed_vibe"] = parsed.vibe
+
+    db.table("users").update({
+        "interests": interests,
         "embedding": embedding,
         "location": location_wkt,
-    }).execute()
+    }).eq("id", str(user_id)).execute()
 
-    return {"user_id": str(user_id), "status": "ok"}
+    return {"status": "ok", "activity_types": parsed.activity_types}
 
 
 @app.post("/jobs/matchmaker")
@@ -67,12 +81,32 @@ def run_matchmaker():
             continue
 
         prefs = user_row.data["interests"]
-        embedding = user_row.data["embedding"]
+        embedding = user_row.data.get("embedding")
 
-        lat = prefs.get("lat")
-        lng = prefs.get("lng")
-        if lat is None or lng is None:
-            continue
+        # Lazy fallback: generate embedding + geometry if process-vibe wasn't called
+        if not embedding:
+            vibe = prefs.get("vibe", "")
+            if not vibe:
+                continue
+            parsed = parse_vibe(vibe)
+            embedding = get_embedding(parsed.vibe, parsed.activity_types)
+            loc = prefs.get("location", {})
+            lat, lng = loc.get("lat"), loc.get("lng")
+            if lat is None or lng is None:
+                continue
+            location_wkt = f"POINT({lng} {lat})"
+            prefs["activity_types"] = parsed.activity_types
+            prefs["parsed_vibe"] = parsed.vibe
+            db.table("users").update({
+                "interests": prefs,
+                "embedding": embedding,
+                "location": location_wkt,
+            }).eq("id", uid).execute()
+        else:
+            loc = prefs.get("location", {})
+            lat, lng = loc.get("lat"), loc.get("lng")
+            if lat is None or lng is None:
+                continue
 
         match_result = db.rpc("match_users", {
             "query_embedding": embedding,
@@ -80,8 +114,7 @@ def run_matchmaker():
             "query_lng": lng,
             "radius_meters": 32000,
             "filter_alcohol": prefs.get("alcohol", False),
-            "filter_budget_min": prefs.get("budget_min", 0),
-            "filter_budget_max": prefs.get("budget_max", 9999),
+            "filter_budget": prefs.get("budget", "medium"),
             "exclude_user_id": uid,
             "match_count": 10,
         }).execute()
@@ -103,19 +136,17 @@ def run_matchmaker():
 
         member_ids = [uid] + [c["user_id"] for c in available_candidates]
 
-        all_activity_types: list[str] = list(prefs.get("activity_types", []))
-        for c in available_candidates:
-            c_row = db.table("users").select("interests").eq("id", c["user_id"]).single().execute()
-            if c_row.data:
-                all_activity_types.extend(c_row.data["interests"].get("activity_types", []))
-
-        activity_type = Counter(all_activity_types).most_common(1)[0][0] if all_activity_types else None
-
-        db.table("groups").insert({
+        group_result = db.table("groups").insert({
             "members": member_ids,
-            "activity_type": activity_type,
-            "status": "pending",
         }).execute()
+
+        new_group_id = group_result.data[0]["id"]
+        db.table("users").update({"group_id": new_group_id}).in_("id", member_ids).execute()
+
+        try:
+            generate_events_for_group(new_group_id)
+        except Exception:
+            pass  # best-effort; group still exists
 
         already_matched.update(member_ids)
         groups_created += 1
@@ -260,18 +291,3 @@ def discover_places(group_id: int):
     )
 
 
-@app.post("/groups/{group_id}/generate-events", response_model=GenerateEventsResponse)
-def generate_events(group_id: int):
-    """Generate 3 event suggestions for a group and store them in the events table."""
-    try:
-        events = generate_events_for_group(group_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Event generation failed: {e}")
-
-    return GenerateEventsResponse(
-        group_id=group_id,
-        events_created=len(events),
-        events=events,
-    )
