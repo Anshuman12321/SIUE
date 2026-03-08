@@ -5,7 +5,39 @@ import httpx
 from pydantic_settings import BaseSettings
 
 VAPI_BASE = "https://api.vapi.ai"
-VAPI_PHONE = "+13148879154"
+VAPI_PHONE = "+13148875694"
+
+RILEY_SYSTEM_PROMPT = """\
+You are Riley, a friendly AI assistant making a phone call to {venue_name} on behalf of {caller_name}.
+
+You are calling to make a reservation for 3 people under the name {caller_name} for {event_date_time}.
+
+Instructions:
+- Introduce yourself as Riley, an AI assistant
+- State your request upfront: you'd like to reserve for {caller_name} at {event_date_time}
+- Only answer questions the venue asks — do not volunteer extra information or ask questions yourself
+- Once the venue confirms the reservation, say thank you and end the call
+- If they cannot accommodate, politely thank them and end the call
+- Keep it short and natural
+"""
+
+STRUCTURED_DATA_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "reservation_status": {
+            "type": "string",
+            "description": "Whether the reservation was successful. Values: 'successful' or 'not successful'",
+        },
+        "confirmed_date_time": {
+            "type": "string",
+            "description": "The confirmed date and time for the reservation, if successful",
+        },
+        "notes": {
+            "type": "string",
+            "description": "Any additional notes or details from the call",
+        },
+    },
+}
 
 
 class VapiSettings(BaseSettings):
@@ -39,7 +71,13 @@ def get_phone_number_id() -> str:
     raise ValueError(f"No Vapi phone number found matching {VAPI_PHONE}")
 
 
-def create_call(customer_number: str) -> dict:
+def create_call(
+    customer_number: str,
+    *,
+    caller_name: str,
+    venue_name: str,
+    event_date_time: str,
+) -> dict:
     """Place an outbound call to *customer_number* via the Riley assistant."""
     phone_number_id = get_phone_number_id()
     settings = get_vapi_settings()
@@ -48,6 +86,30 @@ def create_call(customer_number: str) -> dict:
         "assistantId": settings.vapi_assistant_id,
         "phoneNumberId": phone_number_id,
         "customer": {"number": customer_number},
+        "assistantOverrides": {
+            "firstMessage": (
+                f"Hi, my name is Riley, an AI assistant calling on behalf of {caller_name}. "
+                f"I'd like to make a reservation for at {venue_name}."
+            ),
+            "firstMessageMode": "assistant-waits-for-user",
+            "model": {
+                "provider": "openai",
+                "model": "gpt-4.1",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": RILEY_SYSTEM_PROMPT.format(
+                            caller_name=caller_name,
+                            venue_name=venue_name,
+                            event_date_time=event_date_time,
+                        ),
+                    }
+                ],
+            },
+            "analysisPlan": {
+                "structuredDataSchema": STRUCTURED_DATA_SCHEMA,
+            },
+        },
     }
     resp = httpx.post(
         f"{VAPI_BASE}/call",

@@ -1,4 +1,5 @@
 from collections import Counter
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
@@ -135,9 +136,32 @@ def decline_group(group_id: int, body: DeclineGroupRequest):
 
 @app.post("/calls/place")
 def place_call(body: PlaceCallRequest):
-    """Place an outbound AI agent call and return the structured output."""
+    """Place an outbound AI agent call for a specific event."""
+    db = get_db()
+    event_row = (
+        db.table("events")
+        .select("location_name, phone_number, date_time")
+        .eq("id", body.event_id)
+        .maybe_single()
+        .execute()
+    )
+    if not event_row.data:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    event = event_row.data
+    if not event.get("phone_number"):
+        raise HTTPException(status_code=422, detail="Event has no phone number to call")
+
+    dt = datetime.fromisoformat(event["date_time"])
+    friendly_dt = dt.strftime("%B %-d") + dt.strftime(" at %-I %p").lower()
+
     try:
-        call = create_call(body.phone_number)
+        call = create_call(
+            event["phone_number"],
+            caller_name=body.caller_name,
+            venue_name=event["location_name"],
+            event_date_time=friendly_dt,
+        )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Failed to create Vapi call: {exc}")
 
