@@ -1,16 +1,21 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { MockEvent } from '@/data/mockData'
 import styles from './Dashboard.module.css'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
 
 interface EventsMapProps {
   events: MockEvent[]
+  highlight?: string | null
+  fullScreen?: boolean
 }
 
-export function EventsMap({ events }: EventsMapProps) {
+export function EventsMap({ events, highlight, fullScreen }: EventsMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<unknown>(null)
+  const mapRef = useRef<mapboxgl.Map | null>(null)
+  const markersRef = useRef<mapboxgl.Marker[]>([])
+  const [mapReady, setMapReady] = useState(false)
 
   useEffect(() => {
     if (!MAPBOX_TOKEN || !containerRef.current || mapRef.current) return
@@ -31,26 +36,55 @@ export function EventsMap({ events }: EventsMapProps) {
           container: containerRef.current!,
           style: 'mapbox://styles/mapbox/light-v11',
           center: [center.lng, center.lat],
-          zoom: 11,
+          zoom: fullScreen ? 12 : 11,
         })
 
-        events.forEach((event) => {
-          const el = document.createElement('div')
-          el.className = styles.marker ?? ''
-          el.textContent = event.name
-          new mapboxgl.Marker({ element: el })
-            .setLngLat([event.lng, event.lat])
-            .addTo(map)
+        map.on('load', () => {
+          if (!cancelled) {
+            mapRef.current = map
+            setMapReady(true)
+          }
         })
-
-        mapRef.current = map
       } catch {
         // mapbox-gl not available or token missing
       }
     })()
 
-    return () => { cancelled = true }
-  }, [events])
+    return () => {
+      cancelled = true
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return
+
+    const map = mapRef.current
+
+    ;(async () => {
+      const mapboxgl = (await import('mapbox-gl')).default
+
+      markersRef.current.forEach((m) => m.remove())
+      markersRef.current = []
+
+      events.forEach((event) => {
+        const el = document.createElement('div')
+        const isHighlighted = highlight === event.id
+        el.className = isHighlighted
+          ? (styles.markerHighlight ?? '')
+          : (styles.marker ?? '')
+        el.textContent = event.name
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([event.lng, event.lat])
+          .addTo(map)
+        markersRef.current.push(marker)
+      })
+    })()
+  }, [mapReady, events, highlight])
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -69,5 +103,9 @@ export function EventsMap({ events }: EventsMapProps) {
     )
   }
 
-  return <div ref={containerRef} className={styles.mapContainer} />
+  const containerClass = fullScreen
+    ? `${styles.mapContainer} ${styles.mapFullScreen}`
+    : styles.mapContainer
+
+  return <div ref={containerRef} className={containerClass} />
 }

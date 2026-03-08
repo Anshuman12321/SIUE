@@ -1,55 +1,92 @@
-import { useState } from 'react'
 import type { MockEvent } from '@/data/mockData'
+import { MOCK_CURRENT_USER_ID } from '@/data/mockData'
 import styles from './Dashboard.module.css'
+
+const MAX_VISIBLE_AVATARS = 4
 
 interface EventsSidebarProps {
   events: MockEvent[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+  lockedEventId: string | null
 }
 
-export function EventsSidebar({ events }: EventsSidebarProps) {
-  const [votes, setVotes] = useState<Record<string, boolean>>(() => {
-    const init: Record<string, boolean> = {}
-    events.forEach((e) => { init[e.id] = e.userVoted })
-    return init
-  })
-
-  const [voteCounts, setVoteCounts] = useState<Record<string, number>>(() => {
-    const init: Record<string, number> = {}
-    events.forEach((e) => { init[e.id] = e.votes })
-    return init
-  })
-
-  const toggleVote = (id: string) => {
-    const wasVoted = votes[id]
-    setVotes((v) => ({ ...v, [id]: !wasVoted }))
-    setVoteCounts((c) => ({ ...c, [id]: c[id] + (wasVoted ? -1 : 1) }))
-  }
-
-  const sorted = [...events].sort((a, b) => (voteCounts[b.id] ?? 0) - (voteCounts[a.id] ?? 0))
-
+export function EventsSidebar({ events, selectedId, onSelect, lockedEventId }: EventsSidebarProps) {
   return (
     <div className={styles.eventsSidebar}>
-      {sorted.map((event, i) => (
-        <div key={event.id} className={styles.eventCard}>
-          <div className={styles.eventRank}>#{i + 1}</div>
-          <div className={styles.eventDetails}>
-            <h3 className={styles.eventName}>{event.name}</h3>
-            <p className={styles.eventVenue}>{event.venue}</p>
-            <p className={styles.eventTime}>{event.dateTime}</p>
-            <p className={styles.eventDesc}>{event.description}</p>
+      {events.map((event) => {
+        const isSelected = selectedId === event.id
+        const isLocked = lockedEventId === event.id
+        const isMuted = lockedEventId !== null && lockedEventId !== event.id
+        const currentUserVotedHere = event.voters.some((v) => v.id === MOCK_CURRENT_USER_ID)
+
+        const cardClass = [
+          styles.eventCard,
+          isSelected && !lockedEventId ? styles.eventCardSelected : '',
+          isLocked ? styles.eventCardLocked : '',
+          isMuted ? styles.eventCardMuted : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
+
+        return (
+          <div
+            key={event.id}
+            className={cardClass}
+            onClick={() => !lockedEventId && onSelect(event.id)}
+            role="button"
+            tabIndex={lockedEventId ? -1 : 0}
+            onKeyDown={(e) => {
+              if (!lockedEventId && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault()
+                onSelect(event.id)
+              }
+            }}
+          >
+            {(isLocked || currentUserVotedHere) && (
+              <span className={styles.lockedBadge}>✓</span>
+            )}
+
+            <div className={styles.eventDetails}>
+              <h3 className={styles.eventName}>{event.name}</h3>
+              <p className={styles.eventVenue}>{event.venue}</p>
+              <p className={styles.eventTime}>{event.dateTime}</p>
+              <p className={styles.eventDesc}>{event.description}</p>
+            </div>
+
+            <VoterAvatars voters={event.voters} />
           </div>
-          <div className={styles.eventVoteArea}>
-            <button
-              type="button"
-              className={`${styles.voteBtn} ${votes[event.id] ? styles.voted : ''}`}
-              onClick={() => toggleVote(event.id)}
-            >
-              {votes[event.id] ? '▲' : '△'}
-            </button>
-            <span className={styles.voteCount}>{voteCounts[event.id]}</span>
-          </div>
-        </div>
-      ))}
+        )
+      })}
+    </div>
+  )
+}
+
+function VoterAvatars({ voters }: { voters: MockEvent['voters'] }) {
+  if (voters.length === 0) {
+    return (
+      <div className={styles.voterRow}>
+        <span className={styles.noVoters}>No votes yet</span>
+      </div>
+    )
+  }
+
+  const visible = voters.slice(0, MAX_VISIBLE_AVATARS)
+  const overflow = voters.length - MAX_VISIBLE_AVATARS
+
+  return (
+    <div className={styles.voterRow}>
+      <div className={styles.voterAvatars}>
+        {visible.map((v) => (
+          <img key={v.id} src={v.avatarUrl} alt="" className={styles.voterAvatar} />
+        ))}
+        {overflow > 0 && (
+          <span className={styles.voterOverflow}>+{overflow}</span>
+        )}
+      </div>
+      <span className={styles.voterCount}>
+        {voters.length} vote{voters.length !== 1 ? 's' : ''}
+      </span>
     </div>
   )
 }
