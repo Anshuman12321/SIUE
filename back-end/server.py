@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
-from calendar_sync import sync_availability
+from calendar_sync import sync_availability, users_share_free_time
 from database import get_db
 from embeddings import get_embedding
 from google_auth import build_authorization_url, check_calendar_connected, exchange_code_for_tokens, save_tokens
@@ -95,15 +95,22 @@ def run_matchmaker():
         candidates = [
             c for c in (match_result.data or [])
             if c["user_id"] not in already_matched
+        ]
+
+        # Filter by free time overlap: keep only candidates who share
+        # a 2+ hour free window with the current user
+        available_candidates = [
+            c for c in candidates
+            if users_share_free_time([uid, c["user_id"]])
         ][:3]
 
-        if not candidates:
+        if not available_candidates:
             continue
 
-        member_ids = [uid] + [c["user_id"] for c in candidates]
+        member_ids = [uid] + [c["user_id"] for c in available_candidates]
 
         all_activity_types: list[str] = list(prefs.get("activity_types", []))
-        for c in candidates:
+        for c in available_candidates:
             c_row = db.table("users").select("interests").eq("id", c["user_id"]).single().execute()
             if c_row.data:
                 all_activity_types.extend(c_row.data["interests"].get("activity_types", []))
@@ -147,6 +154,10 @@ def google_calendar_callback(code: str, state: str):
         tokens = exchange_code_for_tokens(code)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Token exchange failed: {e}")
+    # Ensure user row exists (onboarding may not have finished yet)
+    db = get_db()
+    db.table("users").upsert({"id": state}, on_conflict="id", ignore_duplicates=True).execute()
+
     save_tokens(state, tokens)
 
     # Trigger initial availability sync (non-fatal if it fails)
@@ -155,7 +166,7 @@ def google_calendar_callback(code: str, state: str):
     except Exception:
         pass
 
-    return RedirectResponse("http://localhost:5173/home?calendar=connected")
+    return RedirectResponse("http://localhost:5173/onboarding?calendar=connected")
 
 
 @app.get("/users/{user_id}/calendar-status", response_model=CalendarStatusResponse)

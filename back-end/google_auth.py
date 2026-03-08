@@ -1,51 +1,51 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from urllib.parse import urlencode
 
-from google_auth_oauthlib.flow import Flow
+import httpx
 
 from database import get_db, get_settings
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
-
-
-def _build_flow() -> Flow:
-    settings = get_settings()
-    return Flow.from_client_config(
-        {
-            "web": {
-                "client_id": settings.google_client_id,
-                "client_secret": settings.google_client_secret,
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-            }
-        },
-        scopes=SCOPES,
-        redirect_uri=settings.google_redirect_uri,
-    )
+AUTH_URI = "https://accounts.google.com/o/oauth2/auth"
+TOKEN_URI = "https://oauth2.googleapis.com/token"
 
 
 def build_authorization_url(user_id: str) -> str:
     """Create the Google OAuth2 consent URL, passing user_id as state."""
-    flow = _build_flow()
-    url, _ = flow.authorization_url(
-        access_type="offline",
-        prompt="consent",
-        state=user_id,
-    )
-    return url
+    settings = get_settings()
+    params = {
+        "client_id": settings.google_client_id,
+        "redirect_uri": settings.google_redirect_uri,
+        "response_type": "code",
+        "scope": " ".join(SCOPES),
+        "access_type": "offline",
+        "prompt": "consent",
+        "state": user_id,
+    }
+    return f"{AUTH_URI}?{urlencode(params)}"
 
 
 def exchange_code_for_tokens(code: str) -> dict:
     """Exchange the authorization code for access + refresh tokens."""
-    flow = _build_flow()
-    flow.fetch_token(code=code)
-    creds = flow.credentials
+    settings = get_settings()
+    resp = httpx.post(TOKEN_URI, data={
+        "code": code,
+        "client_id": settings.google_client_id,
+        "client_secret": settings.google_client_secret,
+        "redirect_uri": settings.google_redirect_uri,
+        "grant_type": "authorization_code",
+    })
+    resp.raise_for_status()
+    data = resp.json()
+    expires_in = data.get("expires_in", 3600)
+    expiry = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
     return {
-        "access_token": creds.token,
-        "refresh_token": creds.refresh_token,
-        "token_expiry": creds.expiry.isoformat() if creds.expiry else datetime.now(timezone.utc).isoformat(),
-        "scopes": list(creds.scopes or SCOPES),
+        "access_token": data["access_token"],
+        "refresh_token": data.get("refresh_token", ""),
+        "token_expiry": expiry.isoformat(),
+        "scopes": data.get("scope", "").split(),
     }
 
 
@@ -96,24 +96,28 @@ def refresh_access_token(user_id: str) -> str | None:
         return None
 
     row = result.data
+    expiry = datetime.fromisoformat(row["token_expiry"])
+    now = datetime.now(timezone.utc)
 
-    from google.auth.transport.requests import Request
-    from google.oauth2.credentials import Credentials
+    # Return existing token if still valid (with 5-min buffer)
+    if expiry > now + timedelta(minutes=5):
+        return row["access_token"]
 
-    creds = Credentials(
-        token=row["access_token"],
-        refresh_token=row["refresh_token"],
-        token_uri="https://oauth2.googleapis.com/token",
-        client_id=settings.google_client_id,
-        client_secret=settings.google_client_secret,
-    )
+    # Refresh the token
+    resp = httpx.post(TOKEN_URI, data={
+        "client_id": settings.google_client_id,
+        "client_secret": settings.google_client_secret,
+        "refresh_token": row["refresh_token"],
+        "grant_type": "refresh_token",
+    })
+    resp.raise_for_status()
+    data = resp.json()
 
-    if creds.expired or creds.token is None:
-        creds.refresh(Request())
-        db.table("calendar_tokens").update({
-            "access_token": creds.token,
-            "token_expiry": creds.expiry.isoformat() if creds.expiry else datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("user_id", user_id).eq("provider", "google").execute()
+    new_expiry = now + timedelta(seconds=data.get("expires_in", 3600))
+    db.table("calendar_tokens").update({
+        "access_token": data["access_token"],
+        "token_expiry": new_expiry.isoformat(),
+        "updated_at": now.isoformat(),
+    }).eq("user_id", user_id).eq("provider", "google").execute()
 
-    return creds.token
+    return data["access_token"]
