@@ -7,6 +7,10 @@ from supabase import Client, create_client
 class Settings(BaseSettings):
     supabase_url: str
     supabase_key: str
+    gemini_api_key: str
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://localhost:8000/auth/google/calendar/callback"
 
     model_config = {"env_file": ".env"}
 

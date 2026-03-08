@@ -450,6 +450,38 @@
   color: white;
 }
 
+/* ============ CALENDAR ============ */
+.calendarWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.calendarConnected {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-athens);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-downriver);
+}
+
+.calendarStatus {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+}
+
+.calendarNote {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted);
+  text-align: center;
+  margin: 0;
+}
+
 /* ============ ERROR ============ */
 .error {
   padding: var(--spacing-md);

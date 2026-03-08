@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { MOCK_USER_MATCHED, MOCK_GROUP } from '@/data/mockData'
@@ -21,6 +21,7 @@ export function HomePage() {
   const { user, signOut } = useAuth()
   const { profile } = useUserProfile(user ?? null)
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState('members')
   const [calling, setCalling] = useState(false)
   const [callResult, setCallResult] = useState<string | null>(null)
@@ -43,6 +44,17 @@ export function HomePage() {
       setCalling(false)
     }
   }
+  const [calendarMessage, setCalendarMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (searchParams.get('calendar') === 'connected') {
+      setCalendarMessage('Google Calendar connected successfully!')
+      searchParams.delete('calendar')
+      setSearchParams(searchParams, { replace: true })
+      const timer = setTimeout(() => setCalendarMessage(null), 4000)
+      return () => clearTimeout(timer)
+    }
+  }, [])
 
   const initial = user?.email?.charAt(0).toUpperCase() ?? '?'
   const avatarUrl = profile?.avatar_url
@@ -76,6 +88,18 @@ export function HomePage() {
       </div>
 
       <div className={styles.dashContent}>
+        {calendarMessage && (
+          <div style={{
+            padding: '0.75rem 1rem',
+            marginBottom: '1rem',
+            borderRadius: '0.5rem',
+            backgroundColor: '#dcfce7',
+            color: '#166534',
+            fontSize: 'var(--font-size-sm)',
+          }}>
+            {calendarMessage}
+          </div>
+        )}
         <div className={styles.dashWelcome}>
           <h1>Hey, {user?.email?.split('@')[0] ?? 'there'} 👋</h1>
           {isMatched ? (

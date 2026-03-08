@@ -1,15 +1,17 @@
 import { useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   OnboardingProvider,
   useOnboarding,
   PROMPT_OPTIONS,
 } from '@/contexts/OnboardingContext'
+import { useCalendarStatus } from '@/hooks/useCalendarStatus'
 import { Button, Input } from '@/components/ui'
 import styles from './Onboarding.module.css'
 
-const TOTAL_STEPS = 7
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const TOTAL_STEPS = 8
 
 const BUDGET_OPTIONS = [
   { value: 'low' as const, label: '$' },
@@ -318,6 +320,49 @@ function StepPreferences() {
   )
 }
 
+function StepCalendar() {
+  const { user } = useAuth()
+  const { connected, loading } = useCalendarStatus(user?.id)
+
+  const handleConnect = () => {
+    if (!user?.id) return
+    window.location.href = `${API_BASE}/auth/google/calendar?user_id=${user.id}`
+  }
+
+  return (
+    <>
+      <div className={styles.header}>
+        <p className={styles.stepLabel}>Step 7 of {TOTAL_STEPS}</p>
+        <h1 className={styles.title}>Connect your calendar</h1>
+        <p className={styles.subtitle}>
+          We'll check when you're free so we can match you with people who share your schedule.
+        </p>
+      </div>
+      <div className={styles.calendarWrap}>
+        {loading ? (
+          <p className={styles.calendarStatus}>Checking...</p>
+        ) : connected ? (
+          <div className={styles.calendarConnected}>
+            <span className={styles.locationDot} />
+            <span>Google Calendar connected</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className={styles.locationBtn}
+            onClick={handleConnect}
+          >
+            Connect Google Calendar
+          </button>
+        )}
+        <p className={styles.calendarNote}>
+          This is required to match you with people who share your schedule.
+        </p>
+      </div>
+    </>
+  )
+}
+
 function StepVibe() {
   const { state, setField } = useOnboarding()
   const words = state.vibe.trim().split(/\s+/).filter(Boolean).length
@@ -326,7 +371,7 @@ function StepVibe() {
   return (
     <>
       <div className={styles.header}>
-        <p className={styles.stepLabel}>Step 7 of {TOTAL_STEPS}</p>
+        <p className={styles.stepLabel}>Step 8 of {TOTAL_STEPS}</p>
         <h1 className={styles.title}>What's your vibe?</h1>
         <p className={styles.subtitle}>
           Tell us about your hobbies, interests, what you do for fun — go wild.
@@ -355,9 +400,17 @@ function StepVibe() {
 
 function OnboardingFlow() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
   const { state, submit, submitting } = useOnboarding()
-  const [step, setStep] = useState(1)
+  const { connected } = useCalendarStatus(user?.id)
+  const [step, setStep] = useState(() => {
+    if (searchParams.get('calendar') === 'connected') {
+      setSearchParams({}, { replace: true })
+      return 7
+    }
+    return 1
+  })
   const [error, setError] = useState<string | null>(null)
 
   const canContinue = (): boolean => {
@@ -368,7 +421,8 @@ function OnboardingFlow() {
       case 4: return state.prompts.every((p) => p.response.trim().length > 0)
       case 5: return state.location.label.trim().length > 0
       case 6: return true // all have defaults
-      case 7: return state.vibe.trim().length > 0
+      case 7: return connected // must connect calendar
+      case 8: return state.vibe.trim().length > 0
       default: return false
     }
   }
@@ -412,7 +466,8 @@ function OnboardingFlow() {
         {step === 4 && <StepPrompts />}
         {step === 5 && <StepLocation />}
         {step === 6 && <StepPreferences />}
-        {step === 7 && <StepVibe />}
+        {step === 7 && <StepCalendar />}
+        {step === 8 && <StepVibe />}
 
         <div className={styles.navRow}>
           {step > 1 && (

@@ -3,17 +3,21 @@ from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
+from calendar_sync import sync_availability, users_share_free_time
 from database import get_db
 from embeddings import get_embedding
-from models import DeclineGroupRequest, PlaceCallRequest, UpdatePreferencesRequest
 from vapi import create_call, poll_call_until_done
+from google_auth import build_authorization_url, check_calendar_connected, exchange_code_for_tokens, save_tokens
+from models import AvailabilityResponse, CalendarStatusResponse, CalendarSyncResponse, DeclineGroupRequest, ParseVibeRequest, ParseVibeResponse, UpdatePreferencesRequest, DeclineGroupRequest, PlaceCallRequest, UpdatePreferencesRequest
+from vibe_parser import parse_vibe
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -42,7 +46,7 @@ def update_preferences(user_id: UUID, body: UpdatePreferencesRequest):
 def run_matchmaker():
     db = get_db()
 
-    result = db.rpc("get_lonely_users").execute()
+    result = db.rpc("get_lonely_users", {"max_groups": 1}).execute()
     lonely = result.data or []
 
     import random
@@ -83,15 +87,22 @@ def run_matchmaker():
         candidates = [
             c for c in (match_result.data or [])
             if c["user_id"] not in already_matched
+        ]
+
+        # Filter by free time overlap: keep only candidates who share
+        # a 2+ hour free window with the current user
+        available_candidates = [
+            c for c in candidates
+            if users_share_free_time([uid, c["user_id"]])
         ][:3]
 
-        if not candidates:
+        if not available_candidates:
             continue
 
-        member_ids = [uid] + [c["user_id"] for c in candidates]
+        member_ids = [uid] + [c["user_id"] for c in available_candidates]
 
         all_activity_types: list[str] = list(prefs.get("activity_types", []))
-        for c in candidates:
+        for c in available_candidates:
             c_row = db.table("users").select("interests").eq("id", c["user_id"]).single().execute()
             if c_row.data:
                 all_activity_types.extend(c_row.data["interests"].get("activity_types", []))
@@ -144,3 +155,64 @@ def place_call(body: PlaceCallRequest):
         "status": result.get("status"),
         "structured_data": structured_data,
     }
+# ── Google Calendar OAuth ──────────────────────────────────────────
+
+
+@app.get("/auth/google/calendar")
+def google_calendar_auth(user_id: UUID):
+    url = build_authorization_url(str(user_id))
+    return RedirectResponse(url)
+
+
+@app.get("/auth/google/calendar/callback")
+def google_calendar_callback(code: str, state: str):
+    try:
+        tokens = exchange_code_for_tokens(code)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Token exchange failed: {e}")
+    # Ensure user row exists (onboarding may not have finished yet)
+    db = get_db()
+    db.table("users").upsert({"id": state}, on_conflict="id", ignore_duplicates=True).execute()
+
+    save_tokens(state, tokens)
+
+    # Trigger initial availability sync (non-fatal if it fails)
+    try:
+        sync_availability(state)
+    except Exception:
+        pass
+
+    return RedirectResponse("http://localhost:5173/onboarding?calendar=connected")
+
+
+@app.get("/users/{user_id}/calendar-status", response_model=CalendarStatusResponse)
+def calendar_status(user_id: UUID):
+    connected = check_calendar_connected(str(user_id))
+    return CalendarStatusResponse(connected=connected)
+
+
+# ── Calendar Availability ─────────────────────────────────────────
+
+
+@app.post("/users/{user_id}/calendar/sync", response_model=CalendarSyncResponse)
+def sync_calendar(user_id: UUID):
+    try:
+        result = sync_availability(str(user_id))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Calendar sync failed: {e}")
+    return result
+
+
+@app.get("/users/{user_id}/availability", response_model=AvailabilityResponse)
+def get_availability(user_id: UUID):
+    db = get_db()
+    result = (
+        db.table("user_availability")
+        .select("busy_start, busy_end, synced_at")
+        .eq("user_id", str(user_id))
+        .order("busy_start")
+        .execute()
+    )
+    return AvailabilityResponse(user_id=str(user_id), busy_blocks=result.data)
