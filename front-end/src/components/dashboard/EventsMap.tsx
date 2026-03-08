@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import type { MockEvent } from '@/data/mockData'
+import type { DisplayEvent } from '@/lib/types'
 import styles from './Dashboard.module.css'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
 
 interface EventsMapProps {
-  events: MockEvent[]
+  events: DisplayEvent[]
   highlight?: string | null
   fullScreen?: boolean
   onSelect?: (id: string) => void

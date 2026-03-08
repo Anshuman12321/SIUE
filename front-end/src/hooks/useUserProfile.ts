@@ -7,7 +7,7 @@ export interface UserProfile {
   id: string
   interests: Record<string, unknown>
   avatar_url: string | null
-  group_id: string | null
+  group_id: number | null
 }
 
 /**
@@ -47,7 +47,7 @@ export function useUserProfile(user: User | null) {
           id: retryData.id,
           interests: (retryData.interests as Record<string, unknown>) ?? {},
           avatar_url: (retryData.avatar_url as string) ?? null,
-          group_id: (retryData.group_id as string) ?? null,
+          group_id: retryData.group_id != null ? Number(retryData.group_id) : null,
         })
       } else {
         setProfile(null)
@@ -59,7 +59,7 @@ export function useUserProfile(user: User | null) {
         id: data.id,
         interests: (data.interests as Record<string, unknown>) ?? {},
         avatar_url: (data.avatar_url as string) ?? null,
-        group_id: (data.group_id as string) ?? null,
+        group_id: data.group_id != null ? Number(data.group_id) : null,
       })
     }
     setLoading(false)

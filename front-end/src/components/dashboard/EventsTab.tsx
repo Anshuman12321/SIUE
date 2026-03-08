@@ -1,79 +1,169 @@
-import { useState, useMemo } from 'react'
-import {
-  MOCK_GROUP,
-  MOCK_EVENTS,
-  MOCK_GROUP_MEMBERS,
-  MOCK_CURRENT_USER_ID,
-} from '@/data/mockData'
-import type { MockEvent } from '@/data/mockData'
+import { useState, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useGroupData } from '@/hooks/useGroupData'
+import { toDisplayEvent } from '@/lib/types'
+import type { DisplayEvent } from '@/lib/types'
 import { EventsSidebar } from './EventsSidebar'
 import { EventsMap } from './EventsMap'
 import { VotingTimer } from './VotingTimer'
 import { FinalEventCard } from './FinalEventCard'
 import styles from './Dashboard.module.css'
 
-export function EventsTab() {
-  const [events, setEvents] = useState<MockEvent[]>(MOCK_EVENTS)
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+
+interface EventsTabProps {
+  groupId: number
+  currentUserId: string
+}
+
+export function EventsTab({ groupId, currentUserId }: EventsTabProps) {
+  const { group, members, events: dbEvents, votes, loading, error, refetch } = useGroupData(groupId)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [lockedEventId, setLockedEventId] = useState<string | null>(() => {
-    const userVote = MOCK_EVENTS.find((e) =>
-      e.voters.some((v) => v.id === MOCK_CURRENT_USER_ID),
-    )
-    return userVote?.id ?? null
-  })
   const [locking, setLocking] = useState(false)
 
+  const currentUserName = useMemo(
+    () => members.find((m) => m.id === currentUserId)?.name ?? 'User',
+    [members, currentUserId],
+  )
+
+  const displayEvents: DisplayEvent[] = useMemo(() => {
+    return dbEvents.map((e) => {
+      const eventVoters = votes
+        .filter((v) => v.event_id === e.id)
+        .map((v) => {
+          const member = members.find((m) => m.id === v.user_id)
+          return { id: v.user_id, avatarUrl: member?.avatar_url ?? '' }
+        })
+      return toDisplayEvent(e, eventVoters)
+    })
+  }, [dbEvents, votes, members])
+
+  const lockedEventId = useMemo(() => {
+    const userVote = votes.find((v) => v.user_id === currentUserId)
+    if (!userVote) return null
+    return String(userVote.event_id)
+  }, [votes, currentUserId])
+
+  const memberIds = useMemo(
+    () => group?.members ?? members.map((m) => m.id),
+    [group, members],
+  )
+
   const allVoted = useMemo(() => {
-    const voterIds = new Set(events.flatMap((e) => e.voters.map((v) => v.id)))
-    return MOCK_GROUP_MEMBERS.every((m) => voterIds.has(m.id))
-  }, [events])
+    if (memberIds.length === 0) return false
+    const voterIds = new Set(votes.map((v) => v.user_id))
+    return memberIds.every((id) => voterIds.has(id))
+  }, [votes, memberIds])
 
   const winningEvent = useMemo(() => {
     if (!allVoted) return null
-    return [...events].sort((a, b) => b.voters.length - a.voters.length)[0] ?? null
-  }, [allVoted, events])
+    const sorted = [...displayEvents].sort(
+      (a, b) => b.voters.length - a.voters.length,
+    )
+    return sorted[0] ?? null
+  }, [allVoted, displayEvents])
 
-  const handleLockIn = async () => {
+  const finalEvent = useMemo(() => {
+    if (group?.final_event_id) {
+      return displayEvents.find((e) => e.dbId === group.final_event_id) ?? null
+    }
+    return null
+  }, [group, displayEvents])
+
+  const handleLockIn = useCallback(async () => {
     if (!selectedId || lockedEventId || locking) return
     setLocking(true)
+
     try {
+      const numericEventId = Number(selectedId)
+
       await supabase.from('votes').insert({
-        group_id: MOCK_GROUP.id,
-        user_id: MOCK_CURRENT_USER_ID,
-        event_id: selectedId,
+        user_id: currentUserId,
+        event_id: numericEventId,
       })
 
-      const currentMember = MOCK_GROUP_MEMBERS.find((m) => m.id === MOCK_CURRENT_USER_ID)
-      setEvents((prev) =>
-        prev.map((e) =>
-          e.id === selectedId
-            ? {
-                ...e,
-                voters: [
-                  ...e.voters,
-                  {
-                    id: MOCK_CURRENT_USER_ID,
-                    avatarUrl: currentMember?.avatarUrl ?? '',
-                  },
-                ],
-              }
-            : e,
-        ),
-      )
-      setLockedEventId(selectedId)
+      await refetch()
+
+      const { data: freshVotes } = await supabase
+        .from('votes')
+        .select('user_id, event_id')
+        .in('event_id', dbEvents.map((e) => e.id))
+
+      const voterIds = new Set((freshVotes ?? []).map((v: { user_id: string }) => v.user_id))
+      const everyoneVoted = memberIds.every((id) => voterIds.has(id))
+
+      if (everyoneVoted) {
+        const voteCounts = new Map<number, number>()
+        for (const v of freshVotes ?? []) {
+          const eid = (v as { event_id: number }).event_id
+          voteCounts.set(eid, (voteCounts.get(eid) ?? 0) + 1)
+        }
+
+        let winnerId = numericEventId
+        let maxVotes = 0
+        for (const [eid, count] of voteCounts) {
+          if (count > maxVotes) {
+            maxVotes = count
+            winnerId = eid
+          }
+        }
+
+        await supabase
+          .from('groups')
+          .update({ final_event_id: winnerId })
+          .eq('id', groupId)
+
+        try {
+          await fetch(`${API_BASE}/calls/place`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_id: winnerId, name: currentUserName }),
+          })
+        } catch {
+          // reservation call may fail; continue
+        }
+
+        try {
+          const winnerEvent = dbEvents.find((e) => e.id === winnerId)
+          await supabase.functions.invoke('notify-group-event', {
+            body: { group_id: groupId, event: winnerEvent },
+          })
+        } catch {
+          // email notification may fail; continue
+        }
+
+        await refetch()
+      }
     } catch {
-      // Supabase insert failed -- vote stays local anyway for demo
-      setLockedEventId(selectedId)
+      // vote insert failed
     } finally {
       setLocking(false)
     }
+  }, [selectedId, lockedEventId, locking, currentUserId, dbEvents, memberIds, groupId, currentUserName, refetch])
+
+  if (loading) {
+    return <p style={{ color: 'var(--color-muted)' }}>Loading events...</p>
+  }
+
+  if (error) {
+    return <p style={{ color: '#ef4444' }}>Failed to load events: {error}</p>
+  }
+
+  if (finalEvent) {
+    return (
+      <div className={styles.finalizedView}>
+        <FinalEventCard event={finalEvent} confirmed />
+        <div className={styles.finalizedMapWrap}>
+          <EventsMap events={[finalEvent]} highlight={finalEvent.id} fullScreen />
+        </div>
+      </div>
+    )
   }
 
   if (allVoted && winningEvent) {
     return (
       <div className={styles.finalizedView}>
-        <FinalEventCard event={winningEvent} />
+        <FinalEventCard event={winningEvent} confirmed />
         <div className={styles.finalizedMapWrap}>
           <EventsMap events={[winningEvent]} highlight={winningEvent.id} fullScreen />
         </div>
@@ -90,16 +180,17 @@ export function EventsTab() {
             Select an event and lock in your vote.
           </p>
         </div>
-        <VotingTimer endsAt={MOCK_GROUP.votingEndsAt} />
+        {group?.voting_ends_at && <VotingTimer endsAt={group.voting_ends_at} />}
       </div>
 
       <div className={styles.eventsLayout}>
         <div>
           <EventsSidebar
-            events={events}
+            events={displayEvents}
             selectedId={selectedId}
             onSelect={setSelectedId}
             lockedEventId={lockedEventId}
+            currentUserId={currentUserId}
           />
           <LockInArea
             selectedId={selectedId}
@@ -108,7 +199,11 @@ export function EventsTab() {
             onLockIn={handleLockIn}
           />
         </div>
-        <EventsMap events={events} highlight={selectedId ?? lockedEventId} onSelect={lockedEventId ? undefined : setSelectedId} />
+        <EventsMap
+          events={displayEvents}
+          highlight={selectedId ?? lockedEventId}
+          onSelect={lockedEventId ? undefined : setSelectedId}
+        />
       </div>
     </div>
   )

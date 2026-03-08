@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUserProfile } from '@/hooks/useUserProfile'
-import { MOCK_USER_MATCHED, MOCK_GROUP } from '@/data/mockData'
 import {
   SegmentedControl,
   NotMatchedView,
@@ -38,7 +37,8 @@ export function HomePage() {
 
   const initial = user?.email?.charAt(0).toUpperCase() ?? '?'
   const avatarUrl = profile?.avatar_url
-  const isMatched = MOCK_USER_MATCHED
+  const isMatched = !!profile?.group_id
+  const groupId = profile?.group_id ?? null
 
   return (
     <div className={styles.dashboard}>
@@ -83,7 +83,7 @@ export function HomePage() {
         <div className={styles.dashWelcome}>
           <h1>Hey, {user?.email?.split('@')[0] ?? 'there'} 👋</h1>
           {isMatched ? (
-            <p>You're matched with <strong>{MOCK_GROUP.name}</strong>. Explore your group and vote on events!</p>
+            <p>You're matched with <strong>your group</strong>. Explore your group and vote on events!</p>
           ) : (
             <p>Hang tight — we're finding the perfect group for you.</p>
           )}
@@ -105,8 +105,8 @@ export function HomePage() {
               onChange={setActiveTab}
             />
             <div className={styles.tabPanel}>
-              {activeTab === 'members' && <GroupMembersTab />}
-              {activeTab === 'events' && <EventsTab />}
+              {activeTab === 'members' && <GroupMembersTab groupId={groupId!} />}
+              {activeTab === 'events' && <EventsTab groupId={groupId!} currentUserId={user!.id} />}
             </div>
           </>
         )}

@@ -438,6 +438,13 @@ function OnboardingFlow() {
         setError(err)
         return
       }
+
+      try {
+        await fetch(`${API_BASE}/jobs/matchmaker`, { method: 'POST' })
+      } catch {
+        // matchmaker may be unavailable; proceed anyway
+      }
+
       navigate('/home', { replace: true })
     }
   }
