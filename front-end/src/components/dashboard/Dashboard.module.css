@@ -42,6 +42,14 @@
   font-size: var(--font-size-sm);
 }
 
+.topBarAvatarImg {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid var(--color-primary-light);
+}
+
 .topBarBtn {
   background: none;
   border: none;
