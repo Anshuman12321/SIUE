@@ -69,7 +69,7 @@
 }
 
 .dashContent {
-  max-width: var(--container-xl);
+  max-width: 1600px;
   margin: 0 auto;
   padding: var(--spacing-xl);
 }
@@ -507,7 +507,7 @@
   gap: var(--spacing-md);
   max-height: 500px;
   overflow-y: auto;
-  padding-right: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-xs) var(--spacing-xs) var(--spacing-sm);
 }
 
 .eventsSidebar::-webkit-scrollbar {
@@ -521,12 +521,15 @@
 
 .eventCard {
   display: flex;
-  gap: var(--spacing-md);
+  flex-direction: column;
+  gap: var(--spacing-sm);
   padding: var(--spacing-md);
-  border: 1px solid rgba(9, 44, 69, 0.08);
+  border: 2px solid rgba(9, 44, 69, 0.08);
   border-radius: var(--radius-lg);
   transition: all 0.2s ease;
   background: var(--color-white);
+  cursor: pointer;
+  position: relative;
 }
 
 .eventCard:hover {
@@ -534,12 +537,24 @@
   box-shadow: var(--shadow-sm);
 }
 
-.eventRank {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
-  min-width: 32px;
-  flex-shrink: 0;
+.eventCardSelected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(134, 82, 255, 0.15), var(--shadow-md);
+  transform: scale(1.01);
+}
+
+.eventCardSelected:hover {
+  border-color: var(--color-primary);
+}
+
+.eventCardLocked {
+  border-color: var(--color-success);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+}
+
+.eventCardMuted {
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .eventDetails {
@@ -578,44 +593,143 @@
   overflow: hidden;
 }
 
-.eventVoteArea {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.voteBtn {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(9, 44, 69, 0.12);
-  background: var(--color-white);
-  cursor: pointer;
-  font-size: 16px;
+.lockedBadge {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  font-size: 14px;
+  box-shadow: var(--shadow-sm);
+  animation: popIn 0.3s ease;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* ============ VOTER AVATARS ============ */
+.voterRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid rgba(9, 44, 69, 0.06);
+}
+
+.voterAvatars {
+  display: flex;
+  align-items: center;
+}
+
+.voterAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid var(--color-white);
+  margin-left: -6px;
+}
+
+.voterAvatar:first-child {
+  margin-left: 0;
+}
+
+.voterOverflow {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--color-athens);
+  border: 2px solid var(--color-white);
+  margin-left: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
   color: var(--color-muted);
 }
 
-.voteBtn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+.voterCount {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted);
+  font-weight: var(--font-weight-medium);
 }
 
-.voteBtn.voted {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+.noVoters {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+/* ============ LOCK-IN AREA ============ */
+.lockInArea {
+  margin-top: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.lockInBtn {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--gradient-primary);
   color: white;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
 }
 
-.voteCount {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-downriver);
+.lockInBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.lockInBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.lockInBtnLocked {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 2px solid var(--color-success);
+  border-radius: var(--radius-lg);
+  background: rgba(22, 163, 74, 0.08);
+  color: var(--color-success);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  animation: popIn 0.3s ease;
+}
+
+.lockInHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted);
+  text-align: center;
 }
 
 /* ============ VOTING TIMER ============ */
@@ -653,6 +767,11 @@
   border-radius: var(--radius-lg);
   overflow: hidden;
   min-height: 400px;
+}
+
+.mapContainer.mapFullScreen {
+  min-height: 500px;
+  width: 100%;
 }
 
 .marker {
@@ -719,80 +838,166 @@
   text-align: left;
 }
 
-/* ============ FINAL EVENT CARD ============ */
+/* ============ FINALIZED VIEW ============ */
 .finalizedView {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
-.celebrationHeader {
-  margin-bottom: var(--spacing-xl);
-}
-
-.celebrationEmoji {
-  font-size: 48px;
-  display: block;
-  margin-bottom: var(--spacing-sm);
-}
-
-.finalCard {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: var(--spacing-xl);
+.finalizedBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  background: linear-gradient(135deg, rgba(134, 82, 255, 0.06) 0%, rgba(133, 200, 219, 0.08) 100%);
   border: 2px solid var(--color-primary-light);
   border-radius: var(--radius-xl);
-  background: linear-gradient(135deg, rgba(134, 82, 255, 0.04) 0%, rgba(133, 200, 219, 0.06) 100%);
-  text-align: left;
+  margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
 }
 
 .finalBadge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
   padding: var(--spacing-xs) var(--spacing-md);
   background: var(--gradient-primary);
   color: white;
   border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  margin-bottom: var(--spacing-md);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.finalInfo {
+  flex: 1;
+  min-width: 200px;
 }
 
 .finalName {
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--color-downriver);
-  margin: 0 0 var(--spacing-xs) 0;
-}
-
-.finalVenue {
-  font-size: var(--font-size-md);
-  color: var(--color-downriver);
-  font-weight: var(--font-weight-medium);
   margin: 0 0 2px 0;
 }
 
-.finalAddress {
+.finalVenue {
   font-size: var(--font-size-sm);
-  color: var(--color-muted);
-  margin: 0 0 var(--spacing-md) 0;
+  color: var(--color-downriver);
+  font-weight: var(--font-weight-medium);
+  margin: 0;
 }
 
 .finalMeta {
   display: flex;
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-md);
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  text-align: right;
 }
 
-.finalTime,
-.finalVotes {
+.finalTime {
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-primary);
 }
 
-.finalDesc {
-  font-size: var(--font-size-sm);
+.finalAddress {
+  font-size: var(--font-size-xs);
   color: var(--color-muted);
-  line-height: var(--line-height-relaxed);
-  margin: 0;
+}
+
+.finalizedMapWrap {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-height: 500px;
+}
+
+/* ============ MAP FULL-SCREEN MODE ============ */
+.mapContainerFull {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-height: 500px;
+  width: 100%;
+}
+
+.markerHighlight {
+  background: var(--color-success);
+  color: white;
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.25), var(--shadow-lg);
+  transform: scale(1.15);
+}
+
+/* ============ MAP POPUP ============ */
+:global(.mapPopupContainer .mapboxgl-popup-content) {
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 8px 30px rgba(9, 44, 69, 0.18);
+  font-family: var(--font-sans);
+  overflow: hidden;
+}
+
+:global(.mapPopupContainer .mapboxgl-popup-close-button) {
+  font-size: 18px;
+  padding: 4px 8px;
+  color: rgba(9, 44, 69, 0.4);
+  right: 4px;
+  top: 4px;
+}
+
+:global(.mapPopupContainer .mapboxgl-popup-close-button:hover) {
+  color: var(--color-downriver);
+  background: rgba(9, 44, 69, 0.06);
+  border-radius: 6px;
+}
+
+:global(.mapPopup) {
+  padding: 14px 16px;
+}
+
+:global(.mapPopupName) {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-downriver);
+  margin: 0 0 4px 0;
+}
+
+:global(.mapPopupVenue) {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin: 0 0 2px 0;
+}
+
+:global(.mapPopupTime) {
+  font-size: 12px;
+  color: var(--color-primary);
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+:global(.mapPopupDesc) {
+  font-size: 13px;
+  color: var(--color-muted);
+  line-height: 1.5;
+  margin: 0 0 10px 0;
+}
+
+:global(.mapPopupVotes) {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: rgba(134, 82, 255, 0.08);
+  padding: 3px 10px;
+  border-radius: 20px;
 }
 
 /* ============ PREFERENCES PAGE ============ */

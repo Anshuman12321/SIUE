@@ -1,10 +1,9 @@
 export const MOCK_USER_MATCHED = true
+export const MOCK_CURRENT_USER_ID = 'm1'
 
 export const MOCK_GROUP = {
   id: 'group-1',
   name: 'Weekend Crew',
-  eventFinalized: false,
-  finalEventId: null as string | null,
   votingEndsAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 5 * 60 * 60 * 1000).toISOString(),
 }
 
@@ -64,6 +63,11 @@ export const MOCK_GROUP_MEMBERS: MockMember[] = [
   },
 ]
 
+export interface EventVoter {
+  id: string
+  avatarUrl: string
+}
+
 export interface MockEvent {
   id: string
   name: string
@@ -73,8 +77,7 @@ export interface MockEvent {
   lng: number
   dateTime: string
   description: string
-  votes: number
-  userVoted: boolean
+  voters: EventVoter[]
 }
 
 export const MOCK_EVENTS: MockEvent[] = [
@@ -87,8 +90,9 @@ export const MOCK_EVENTS: MockEvent[] = [
     lng: -90.5771,
     dateTime: 'Sat, Mar 15 at 2:00 PM',
     description: 'Driving range with a social twist. Food, drinks, and friendly competition.',
-    votes: 3,
-    userVoted: true,
+    voters: [
+      { id: 'm2', avatarUrl: 'https://i.pravatar.cc/400?img=33' },
+    ],
   },
   {
     id: 'e2',
@@ -99,8 +103,7 @@ export const MOCK_EVENTS: MockEvent[] = [
     lng: -90.2073,
     dateTime: 'Sat, Mar 15 at 8:00 PM',
     description: 'Classic neighborhood bar with great cocktails and live music on weekends.',
-    votes: 2,
-    userVoted: false,
+    voters: [],
   },
   {
     id: 'e3',
@@ -111,23 +114,9 @@ export const MOCK_EVENTS: MockEvent[] = [
     lng: -90.2843,
     dateTime: 'Sun, Mar 16 at 10:00 AM',
     description: 'Casual morning hike through one of the largest urban parks in the US.',
-    votes: 1,
-    userVoted: false,
+    voters: [],
   },
 ]
-
-export const MOCK_FINAL_EVENT: MockEvent = {
-  id: 'e1',
-  name: 'Top Golf',
-  venue: 'Topgolf Chesterfield',
-  address: '16851 N Outer 40 Rd, Chesterfield, MO',
-  lat: 38.6631,
-  lng: -90.5771,
-  dateTime: 'Sat, Mar 15 at 2:00 PM',
-  description: 'Driving range with a social twist. Food, drinks, and friendly competition.',
-  votes: 3,
-  userVoted: true,
-}
 
 export const MOCK_USER_PREFERENCES = {
   location: 'St. Louis, MO',

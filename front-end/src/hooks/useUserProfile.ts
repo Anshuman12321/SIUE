@@ -7,6 +7,7 @@ export interface UserProfile {
   id: string
   interests: Record<string, unknown>
   avatar_url: string | null
+  group_id: string | null
 }
 
 /**
@@ -28,7 +29,7 @@ export function useUserProfile(user: User | null) {
     setLoading(true)
     const { data, error } = await supabase
       .from('users')
-      .select('id, interests, avatar_url')
+      .select('id, interests, avatar_url, group_id')
       .eq('id', user.id)
       .single()
 
@@ -37,7 +38,7 @@ export function useUserProfile(user: User | null) {
       await ensureUserProfile(user.id)
       const { data: retryData } = await supabase
         .from('users')
-        .select('id, interests, avatar_url')
+        .select('id, interests, avatar_url, group_id')
         .eq('id', user.id)
         .single()
 
@@ -46,6 +47,7 @@ export function useUserProfile(user: User | null) {
           id: retryData.id,
           interests: (retryData.interests as Record<string, unknown>) ?? {},
           avatar_url: (retryData.avatar_url as string) ?? null,
+          group_id: (retryData.group_id as string) ?? null,
         })
       } else {
         setProfile(null)
@@ -57,6 +59,7 @@ export function useUserProfile(user: User | null) {
         id: data.id,
         interests: (data.interests as Record<string, unknown>) ?? {},
         avatar_url: (data.avatar_url as string) ?? null,
+        group_id: (data.group_id as string) ?? null,
       })
     }
     setLoading(false)

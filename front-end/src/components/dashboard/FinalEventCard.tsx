@@ -7,16 +7,16 @@ interface FinalEventCardProps {
 
 export function FinalEventCard({ event }: FinalEventCardProps) {
   return (
-    <div className={styles.finalCard}>
-      <div className={styles.finalBadge}>🎉 Chosen Event</div>
-      <h3 className={styles.finalName}>{event.name}</h3>
-      <p className={styles.finalVenue}>{event.venue}</p>
-      <p className={styles.finalAddress}>{event.address}</p>
+    <div className={styles.finalizedBanner}>
+      <span className={styles.finalBadge}>🎉 Chosen Event</span>
+      <div className={styles.finalInfo}>
+        <h3 className={styles.finalName}>{event.name}</h3>
+        <p className={styles.finalVenue}>{event.venue}</p>
+      </div>
       <div className={styles.finalMeta}>
         <span className={styles.finalTime}>📅 {event.dateTime}</span>
-        <span className={styles.finalVotes}>👍 {event.votes} votes</span>
+        <span className={styles.finalAddress}>📍 {event.address}</span>
       </div>
-      <p className={styles.finalDesc}>{event.description}</p>
     </div>
   )
 }
