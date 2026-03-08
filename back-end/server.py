@@ -33,7 +33,7 @@ def update_preferences(user_id: UUID, body: UpdatePreferencesRequest):
 def run_matchmaker():
     db = get_db()
 
-    result = db.rpc("get_lonely_users").execute()
+    result = db.rpc("get_lonely_users", {"max_groups": 1}).execute()
     lonely = result.data or []
 
     import random
