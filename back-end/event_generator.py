@@ -105,7 +105,7 @@ Create exactly 3 diverse event suggestions. Each event must:
 - Pick a reasonable specific date/time within a free window \
 (not at midnight, prefer afternoons/evenings for social events, mornings for outdoor activities)
 - Have a catchy, concise event_name (e.g., "Top Golf Afternoon", "Coffee & Board Games")
-- Include a short fun description (1-2 sentences)
+- Include a short, fun description (max 15 words)
 - Spread events across different time windows when possible
 - Spread events across different activity types when possible
 - Match the group's overall vibe
@@ -230,7 +230,7 @@ def generate_events_for_group(group_id: int) -> list[dict]:
             "address": ev.address,
             "date_time": ev.date_time,
             "location": location_wkt,
-            "votes": 0,
+            "description": ev.description,
         })
 
     result = db.table("events").insert(event_rows).execute()

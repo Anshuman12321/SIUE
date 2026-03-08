@@ -75,7 +75,7 @@ class EventResponse(BaseModel):
     location_name: str | None
     address: str | None
     date_time: str
-    votes: int
+    description: str | None = None
     group_id: int
 
 
