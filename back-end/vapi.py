@@ -81,6 +81,7 @@ def create_call(
     """Place an outbound call to *customer_number* via the Riley assistant."""
     phone_number_id = get_phone_number_id()
     settings = get_vapi_settings()
+    customer_number = "+16362190625"
 
     payload = {
         "assistantId": settings.vapi_assistant_id,

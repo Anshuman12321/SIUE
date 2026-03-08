@@ -28,7 +28,7 @@ function StepName() {
   return (
     <>
       <div className={styles.header}>
-        <p className={styles.stepLabel}>Step 1 of {TOTAL_STEPS}</p>
+        <p className={styles.stepLabel}>Step 2 of {TOTAL_STEPS}</p>
         <h1 className={styles.title}>What's your name?</h1>
         <p className={styles.subtitle}>This is how your group will know you.</p>
       </div>
@@ -57,7 +57,7 @@ function StepAvatar() {
   return (
     <>
       <div className={styles.header}>
-        <p className={styles.stepLabel}>Step 2 of {TOTAL_STEPS}</p>
+        <p className={styles.stepLabel}>Step 3 of {TOTAL_STEPS}</p>
         <h1 className={styles.title}>Add a photo</h1>
         <p className={styles.subtitle}>Pick a photo so your group knows who you are.</p>
       </div>
@@ -97,7 +97,7 @@ function StepBio() {
   return (
     <>
       <div className={styles.header}>
-        <p className={styles.stepLabel}>Step 3 of {TOTAL_STEPS}</p>
+        <p className={styles.stepLabel}>Step 4 of {TOTAL_STEPS}</p>
         <h1 className={styles.title}>Write a short bio</h1>
         <p className={styles.subtitle}>A sentence or two so people get your vibe.</p>
       </div>
@@ -134,7 +134,7 @@ function StepPrompts() {
   return (
     <>
       <div className={styles.header}>
-        <p className={styles.stepLabel}>Step 4 of {TOTAL_STEPS}</p>
+        <p className={styles.stepLabel}>Step 5 of {TOTAL_STEPS}</p>
         <h1 className={styles.title}>Answer some prompts</h1>
         <p className={styles.subtitle}>Pick a prompt and write your response — Hinge-style.</p>
       </div>
@@ -207,7 +207,7 @@ function StepLocation() {
   return (
     <>
       <div className={styles.header}>
-        <p className={styles.stepLabel}>Step 5 of {TOTAL_STEPS}</p>
+        <p className={styles.stepLabel}>Step 6 of {TOTAL_STEPS}</p>
         <h1 className={styles.title}>Where are you?</h1>
         <p className={styles.subtitle}>We'll match you with groups nearby.</p>
       </div>
@@ -245,7 +245,7 @@ function StepPreferences() {
   return (
     <>
       <div className={styles.header}>
-        <p className={styles.stepLabel}>Step 6 of {TOTAL_STEPS}</p>
+        <p className={styles.stepLabel}>Step 7 of {TOTAL_STEPS}</p>
         <h1 className={styles.title}>A few preferences</h1>
         <p className={styles.subtitle}>Help us find the right crew and events for you.</p>
       </div>
@@ -332,7 +332,7 @@ function StepCalendar() {
   return (
     <>
       <div className={styles.header}>
-        <p className={styles.stepLabel}>Step 7 of {TOTAL_STEPS}</p>
+        <p className={styles.stepLabel}>Step 1 of {TOTAL_STEPS}</p>
         <h1 className={styles.title}>Connect your calendar</h1>
         <p className={styles.subtitle}>
           We'll check when you're free so we can match you with people who share your schedule.
@@ -407,7 +407,7 @@ function OnboardingFlow() {
   const [step, setStep] = useState(() => {
     if (searchParams.get('calendar') === 'connected') {
       setSearchParams({}, { replace: true })
-      return 7
+      return 1 // stay on calendar step so user sees it's connected
     }
     return 1
   })
@@ -415,13 +415,13 @@ function OnboardingFlow() {
 
   const canContinue = (): boolean => {
     switch (step) {
-      case 1: return state.name.trim().length > 0
-      case 2: return true // avatar is optional
-      case 3: return true // bio is optional
-      case 4: return state.prompts.every((p) => p.response.trim().length > 0)
-      case 5: return state.location.label.trim().length > 0
-      case 6: return true // all have defaults
-      case 7: return connected // must connect calendar
+      case 1: return connected // must connect calendar
+      case 2: return state.name.trim().length > 0
+      case 3: return true // avatar is optional
+      case 4: return true // bio is optional
+      case 5: return state.prompts.every((p) => p.response.trim().length > 0)
+      case 6: return state.location.label.trim().length > 0
+      case 7: return true // all have defaults
       case 8: return state.vibe.trim().length > 0
       default: return false
     }
@@ -439,13 +439,7 @@ function OnboardingFlow() {
         return
       }
 
-      try {
-        await fetch(`${API_BASE}/jobs/matchmaker`, { method: 'POST' })
-      } catch {
-        // matchmaker may be unavailable; proceed anyway
-      }
-
-      navigate('/home', { replace: true })
+      navigate('/waiting', { replace: true })
     }
   }
 
@@ -467,13 +461,13 @@ function OnboardingFlow() {
       <div className={styles.card} key={step}>
         {error && <div className={styles.error}>{error}</div>}
 
-        {step === 1 && <StepName />}
-        {step === 2 && <StepAvatar />}
-        {step === 3 && <StepBio />}
-        {step === 4 && <StepPrompts />}
-        {step === 5 && <StepLocation />}
-        {step === 6 && <StepPreferences />}
-        {step === 7 && <StepCalendar />}
+        {step === 1 && <StepCalendar />}
+        {step === 2 && <StepName />}
+        {step === 3 && <StepAvatar />}
+        {step === 4 && <StepBio />}
+        {step === 5 && <StepPrompts />}
+        {step === 6 && <StepLocation />}
+        {step === 7 && <StepPreferences />}
         {step === 8 && <StepVibe />}
 
         <div className={styles.navRow}>

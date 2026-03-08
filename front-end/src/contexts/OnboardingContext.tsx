@@ -59,13 +59,16 @@ const DEFAULT_PROMPTS: [PromptPair, PromptPair] = [
   { prompt: 'You should know about me that…', response: '' },
 ]
 
+const DEFAULT_LAT = 38.631079304478895
+const DEFAULT_LNG = -90.1932472121037
+
 const INITIAL_STATE: OnboardingState = {
   name: '',
   avatarFile: null,
   avatarPreview: null,
   bio: '',
   prompts: DEFAULT_PROMPTS,
-  location: { lat: 0, lng: 0, label: '' },
+  location: { lat: DEFAULT_LAT, lng: DEFAULT_LNG, label: '' },
   ageRange: { min: 18, max: 30 },
   alcohol: true,
   budget: 'medium',
@@ -112,8 +115,13 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         avatarUrl = urlData.publicUrl
       }
 
+      const location: LocationData =
+        state.location.lat === 0 && state.location.lng === 0
+          ? { lat: DEFAULT_LAT, lng: DEFAULT_LNG, label: state.location.label }
+          : state.location
+
       const interests: InterestsData = {
-        location: state.location,
+        location,
         age_range: state.ageRange,
         alcohol: state.alcohol,
         budget: state.budget,
@@ -131,10 +139,15 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         updatePayload.avatar_url = avatarUrl
       }
 
-      const { error: updateErr } = await supabase
+      const payload = { id: userId, ...updatePayload }
+      console.log('[OnboardingContext] upsert payload:', JSON.stringify(payload, null, 2))
+
+      const { data: upsertData, error: updateErr } = await supabase
         .from('users')
-        .update(updatePayload)
-        .eq('id', userId)
+        .upsert(payload)
+        .select()
+
+      console.log('[OnboardingContext] upsert result:', { data: upsertData, error: updateErr })
 
       setSubmitting(false)
 

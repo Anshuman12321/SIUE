@@ -10,6 +10,68 @@ import { FinalEventCard } from './FinalEventCard'
 import styles from './Dashboard.module.css'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY as string | undefined
+
+async function sendEventEmail(
+  groupId: number,
+  event: import('@/lib/types').DbEvent | null,
+) {
+  if (!RESEND_API_KEY || !event) return
+
+  const { data: emails, error } = await supabase.rpc('get_group_emails', {
+    p_group_id: groupId,
+  })
+  if (error || !emails?.length) {
+    console.error('[sendEventEmail] failed to get emails:', error)
+    return
+  }
+
+  const eventName = event.event_name ?? 'your event'
+  const venue = event.location_name ?? ''
+  const address = event.address ?? ''
+  const dateTime = event.date_time
+    ? new Date(event.date_time).toLocaleString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : ''
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 32px;">
+      <h1 style="color: #092c45; font-size: 24px;">Your Event is Confirmed!</h1>
+      <p style="color: #6b7280; font-size: 16px; line-height: 1.6;">
+        Your group has voted and the event has been finalized. A reservation has been made automatically.
+      </p>
+      <div style="background: #f3f0ff; border-radius: 12px; padding: 20px; margin: 24px 0;">
+        <h2 style="color: #8652ff; font-size: 20px; margin: 0 0 8px;">${eventName}</h2>
+        ${venue ? `<p style="color: #092c45; margin: 4px 0;"><strong>Venue:</strong> ${venue}</p>` : ''}
+        ${dateTime ? `<p style="color: #092c45; margin: 4px 0;"><strong>When:</strong> ${dateTime}</p>` : ''}
+        ${address ? `<p style="color: #092c45; margin: 4px 0;"><strong>Where:</strong> ${address}</p>` : ''}
+      </div>
+      <p style="color: #6b7280; font-size: 14px;">See you there!</p>
+    </div>
+  `
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+    },
+    body: JSON.stringify({
+      from: 'Connect <onboarding@resend.dev>',
+      to: emails as string[],
+      subject: `Event Confirmed: ${eventName}`,
+      html,
+    }),
+  })
+
+  const result = await res.json()
+  console.log('[sendEventEmail] result:', result)
+}
 
 interface EventsTabProps {
   groupId: number
@@ -124,10 +186,7 @@ export function EventsTab({ groupId, currentUserId }: EventsTabProps) {
         }
 
         try {
-          const winnerEvent = dbEvents.find((e) => e.id === winnerId)
-          await supabase.functions.invoke('notify-group-event', {
-            body: { group_id: groupId, event: winnerEvent },
-          })
+          await sendEventEmail(groupId, dbEvents.find((e) => e.id === winnerId) ?? null)
         } catch {
           // email notification may fail; continue
         }
