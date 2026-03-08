@@ -53,3 +53,35 @@ class BusyBlock(BaseModel):
 class AvailabilityResponse(BaseModel):
     user_id: str
     busy_blocks: list[BusyBlock]
+
+
+class PlaceResult(BaseModel):
+    place_id: str
+    display_name: str
+    address: str
+    lat: float
+    lng: float
+    primary_type: str
+    summary: str = ""
+
+
+class PlaceDiscoveryResponse(BaseModel):
+    centroid_lat: float
+    centroid_lng: float
+    places: list[PlaceResult]
+
+
+class EventResponse(BaseModel):
+    id: int
+    event_name: str
+    location_name: str | None
+    address: str | None
+    date_time: str
+    votes: int
+    group_id: int
+
+
+class GenerateEventsResponse(BaseModel):
+    group_id: int
+    events_created: int
+    events: list[EventResponse]
