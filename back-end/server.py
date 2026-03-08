@@ -64,6 +64,7 @@ def run_matchmaker():
 
     result = db.rpc("get_lonely_users", {"max_groups": 1}).execute()
     lonely = result.data or []
+    print(f"[matchmaker] Found {len(lonely)} lonely users: {lonely}")
 
     import random
     random.shuffle(lonely)
@@ -73,15 +74,19 @@ def run_matchmaker():
 
     for row in lonely:
         uid = row["user_id"]
+        print(f"[matchmaker] Processing user {uid}")
         if uid in already_matched:
+            print(f"[matchmaker] Skipping {uid} — already matched")
             continue
 
         user_row = db.table("users").select("interests,embedding").eq("id", uid).single().execute()
         if not user_row.data:
+            print(f"[matchmaker] Skipping {uid} — no user data")
             continue
 
         prefs = user_row.data["interests"]
         embedding = user_row.data.get("embedding")
+        print(f"[matchmaker] User {uid} has embedding: {embedding is not None}, prefs: {list(prefs.keys()) if prefs else None}")
 
         # Lazy fallback: generate embedding + geometry if process-vibe wasn't called
         if not embedding:
@@ -123,6 +128,7 @@ def run_matchmaker():
             c for c in (match_result.data or [])
             if c["user_id"] not in already_matched
         ]
+        print(f"[matchmaker] Found {len(candidates)} candidates for {uid}")
 
         # Filter by free time overlap: keep only candidates who share
         # a 2+ hour free window with the current user
@@ -130,8 +136,10 @@ def run_matchmaker():
             c for c in candidates
             if users_share_free_time([uid, c["user_id"]])
         ][:3]
+        print(f"[matchmaker] {len(available_candidates)} candidates passed free-time filter")
 
         if not available_candidates:
+            print(f"[matchmaker] No available candidates for {uid}, skipping")
             continue
 
         member_ids = [uid] + [c["user_id"] for c in available_candidates]
@@ -142,11 +150,16 @@ def run_matchmaker():
 
         new_group_id = group_result.data[0]["id"]
         db.table("users").update({"group_id": new_group_id}).in_("id", member_ids).execute()
+        print(f"[matchmaker] Created group {new_group_id} with members {member_ids}")
 
         try:
+            print(f"[matchmaker] Generating events for group {new_group_id}...")
             generate_events_for_group(new_group_id)
-        except Exception:
-            pass  # best-effort; group still exists
+            print(f"[matchmaker] Events generated successfully for group {new_group_id}")
+        except Exception as exc:
+            print(f"[matchmaker] Event generation failed for group {new_group_id}: {exc}")
+            import traceback
+            traceback.print_exc()
 
         already_matched.update(member_ids)
         groups_created += 1
