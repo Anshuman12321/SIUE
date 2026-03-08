@@ -10,7 +10,6 @@ import {
 } from '@/components/dashboard'
 import type { Segment } from '@/components/dashboard'
 import styles from '@/components/dashboard/Dashboard.module.css'
-import { RileyCallButton } from '@/components/RileyCallButton'
 
 const TABS: Segment[] = [
   { id: 'members', label: 'Group Members', icon: '👥' },
@@ -87,10 +86,6 @@ export function HomePage() {
           ) : (
             <p>Hang tight — we're finding the perfect group for you.</p>
           )}
-        </div>
-
-        <div className={styles.tabPanel} style={{ marginBottom: 'var(--spacing-xl)' }}>
-          <RileyCallButton />
         </div>
 
         {!isMatched ? (
