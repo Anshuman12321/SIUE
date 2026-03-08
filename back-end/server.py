@@ -8,8 +8,9 @@ from fastapi.responses import RedirectResponse
 from calendar_sync import sync_availability, users_share_free_time
 from database import get_db
 from embeddings import get_embedding
+from vapi import create_call, poll_call_until_done
 from google_auth import build_authorization_url, check_calendar_connected, exchange_code_for_tokens, save_tokens
-from models import AvailabilityResponse, CalendarStatusResponse, CalendarSyncResponse, DeclineGroupRequest, ParseVibeRequest, ParseVibeResponse, UpdatePreferencesRequest
+from models import AvailabilityResponse, CalendarStatusResponse, CalendarSyncResponse, DeclineGroupRequest, ParseVibeRequest, ParseVibeResponse, UpdatePreferencesRequest, DeclineGroupRequest, PlaceCallRequest, UpdatePreferencesRequest
 from vibe_parser import parse_vibe
 
 app = FastAPI()
@@ -20,15 +21,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.post("/parse-vibe", response_model=ParseVibeResponse)
-def parse_vibe_endpoint(body: ParseVibeRequest):
-    try:
-        result = parse_vibe(body.raw_text)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Gemini API error: {e}")
-    return result
 
 
 @app.post("/users/{user_id}/preferences")
@@ -139,6 +131,30 @@ def decline_group(group_id: int, body: DeclineGroupRequest):
     return {"status": "ok"}
 
 
+@app.post("/calls/place")
+def place_call(body: PlaceCallRequest):
+    """Place an outbound AI agent call and return the structured output."""
+    try:
+        call = create_call(body.phone_number)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to create Vapi call: {exc}")
+
+    call_id = call["id"]
+
+    try:
+        result = poll_call_until_done(call_id)
+    except TimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Error polling call status: {exc}")
+
+    structured_data = (result.get("analysis") or {}).get("structuredData")
+
+    return {
+        "call_id": call_id,
+        "status": result.get("status"),
+        "structured_data": structured_data,
+    }
 # ── Google Calendar OAuth ──────────────────────────────────────────
 
 
