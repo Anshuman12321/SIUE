@@ -90,7 +90,7 @@ def create_call(
         "assistantOverrides": {
             "firstMessage": (
                 f"Hi, my name is Riley, an AI assistant calling on behalf of {caller_name}. "
-                f"I'd like to make a reservation for at {venue_name}."
+                f"I'd like to make a reservation at {venue_name}."
             ),
             "firstMessageMode": "assistant-waits-for-user",
             "model": {
