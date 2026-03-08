@@ -108,7 +108,7 @@ export function EventsTab() {
             onLockIn={handleLockIn}
           />
         </div>
-        <EventsMap events={events} highlight={selectedId ?? lockedEventId} />
+        <EventsMap events={events} highlight={selectedId ?? lockedEventId} onSelect={lockedEventId ? undefined : setSelectedId} />
       </div>
     </div>
   )

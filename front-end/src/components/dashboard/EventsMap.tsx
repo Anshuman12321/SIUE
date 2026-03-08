@@ -9,12 +9,14 @@ interface EventsMapProps {
   events: MockEvent[]
   highlight?: string | null
   fullScreen?: boolean
+  onSelect?: (id: string) => void
 }
 
-export function EventsMap({ events, highlight, fullScreen }: EventsMapProps) {
+export function EventsMap({ events, highlight, fullScreen, onSelect }: EventsMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
+  const popupRef = useRef<mapboxgl.Popup | null>(null)
   const [mapReady, setMapReady] = useState(false)
 
   useEffect(() => {
@@ -70,6 +72,10 @@ export function EventsMap({ events, highlight, fullScreen }: EventsMapProps) {
 
       markersRef.current.forEach((m) => m.remove())
       markersRef.current = []
+      if (popupRef.current) {
+        popupRef.current.remove()
+        popupRef.current = null
+      }
 
       events.forEach((event) => {
         const el = document.createElement('div')
@@ -78,13 +84,48 @@ export function EventsMap({ events, highlight, fullScreen }: EventsMapProps) {
           ? (styles.markerHighlight ?? '')
           : (styles.marker ?? '')
         el.textContent = event.name
+
+        el.addEventListener('click', () => {
+          onSelect?.(event.id)
+
+          if (popupRef.current) {
+            popupRef.current.remove()
+            popupRef.current = null
+          }
+
+          const voteText =
+            event.voters.length === 0
+              ? 'No votes yet'
+              : `${event.voters.length} vote${event.voters.length !== 1 ? 's' : ''}`
+
+          const popup = new mapboxgl.Popup({
+            offset: 25,
+            closeButton: true,
+            maxWidth: '280px',
+            className: 'mapPopupContainer',
+          })
+            .setLngLat([event.lng, event.lat])
+            .setHTML(
+              `<div class="mapPopup">
+                <h4 class="mapPopupName">${event.name}</h4>
+                <p class="mapPopupVenue">${event.venue}</p>
+                <p class="mapPopupTime">${event.dateTime}</p>
+                <p class="mapPopupDesc">${event.description}</p>
+                <span class="mapPopupVotes">${voteText}</span>
+              </div>`,
+            )
+            .addTo(map)
+
+          popupRef.current = popup
+        })
+
         const marker = new mapboxgl.Marker({ element: el })
           .setLngLat([event.lng, event.lat])
           .addTo(map)
         markersRef.current.push(marker)
       })
     })()
-  }, [mapReady, events, highlight])
+  }, [mapReady, events, highlight, onSelect])
 
   if (!MAPBOX_TOKEN) {
     return (
