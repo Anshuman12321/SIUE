@@ -33,3 +33,8 @@ class ParseVibeResponse(BaseModel):
 
 class DeclineGroupRequest(BaseModel):
     user_id: UUID
+
+
+class CalendarStatusResponse(BaseModel):
+    connected: bool
+    provider: str = "google"

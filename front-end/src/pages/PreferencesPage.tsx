@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
+import { useCalendarStatus } from '@/hooks/useCalendarStatus'
 import { MOCK_USER_PREFERENCES } from '@/data/mockData'
 import { Button } from '@/components/ui'
 import styles from '@/components/dashboard/Dashboard.module.css'
+
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 const AGE_GROUPS = ['18-20', '21-25', '26-30', '31+']
 const BUDGETS = ['$', '$$', '$$$', '$$$$']
@@ -27,6 +31,8 @@ const VIBES = [
 
 export function PreferencesPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const { connected: calendarConnected, loading: calendarLoading } = useCalendarStatus(user?.id)
 
   const [location, setLocation] = useState(MOCK_USER_PREFERENCES.location)
   const [ageGroup, setAgeGroup] = useState(MOCK_USER_PREFERENCES.ageGroup)
@@ -158,6 +164,37 @@ export function PreferencesPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <hr className={styles.divider} />
+
+          <div className={styles.prefGroup}>
+            <p className={styles.prefLabel}>Google Calendar</p>
+            {calendarLoading ? (
+              <span style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-sm)' }}>
+                Checking...
+              </span>
+            ) : calendarConnected ? (
+              <span style={{ color: '#16a34a', fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
+                Connected
+              </span>
+            ) : (
+              <div>
+                <span style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-sm)', marginRight: '0.75rem' }}>
+                  Not connected
+                </span>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    if (user?.id) {
+                      window.location.href = `${API_BASE}/auth/google/calendar?user_id=${user.id}`
+                    }
+                  }}
+                >
+                  Connect Google Calendar
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className={styles.prefActions}>

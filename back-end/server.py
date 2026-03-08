@@ -3,10 +3,12 @@ from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from database import get_db
 from embeddings import get_embedding
-from models import DeclineGroupRequest, ParseVibeRequest, ParseVibeResponse, UpdatePreferencesRequest
+from google_auth import build_authorization_url, check_calendar_connected, exchange_code_for_tokens, save_tokens
+from models import CalendarStatusResponse, DeclineGroupRequest, ParseVibeRequest, ParseVibeResponse, UpdatePreferencesRequest
 from vibe_parser import parse_vibe
 
 app = FastAPI()
@@ -127,3 +129,28 @@ def decline_group(group_id: int, body: DeclineGroupRequest):
         "p_user_id": str(body.user_id),
     }).execute()
     return {"status": "ok"}
+
+
+# ── Google Calendar OAuth ──────────────────────────────────────────
+
+
+@app.get("/auth/google/calendar")
+def google_calendar_auth(user_id: UUID):
+    url = build_authorization_url(str(user_id))
+    return RedirectResponse(url)
+
+
+@app.get("/auth/google/calendar/callback")
+def google_calendar_callback(code: str, state: str):
+    try:
+        tokens = exchange_code_for_tokens(code)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Token exchange failed: {e}")
+    save_tokens(state, tokens)
+    return RedirectResponse("http://localhost:5173/home?calendar=connected")
+
+
+@app.get("/users/{user_id}/calendar-status", response_model=CalendarStatusResponse)
+def calendar_status(user_id: UUID):
+    connected = check_calendar_connected(str(user_id))
+    return CalendarStatusResponse(connected=connected)
