@@ -35,24 +35,22 @@ class DeclineGroupRequest(BaseModel):
     user_id: UUID
 
 
+class PlaceCallRequest(BaseModel):
+    phone_number: str
+
+
 class CalendarStatusResponse(BaseModel):
     connected: bool
-    provider: str = "google"
+    provider: str | None = None
 
 
 class CalendarSyncResponse(BaseModel):
     blocks_synced: int
 
 
-class BusyBlock(BaseModel):
-    busy_start: str
-    busy_end: str
-    synced_at: str
-
-
 class AvailabilityResponse(BaseModel):
     user_id: str
-    busy_blocks: list[BusyBlock]
+    busy_blocks: list[dict]
 
 
 class PlaceResult(BaseModel):

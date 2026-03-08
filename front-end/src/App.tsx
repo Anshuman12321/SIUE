@@ -7,6 +7,7 @@ import { SignupPage } from '@/pages/SignupPage'
 import { OnboardingPage } from '@/pages/OnboardingPage'
 import { HomePage } from '@/pages/HomePage'
 import { PreferencesPage } from '@/pages/PreferencesPage'
+import { WaitingRoomPage } from '@/pages/WaitingRoomPage'
 
 function App() {
   return (
@@ -41,6 +42,14 @@ function App() {
                 <OnboardingGuard>
                   <PreferencesPage />
                 </OnboardingGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/waiting"
+            element={
+              <ProtectedRoute>
+                <WaitingRoomPage />
               </ProtectedRoute>
             }
           />

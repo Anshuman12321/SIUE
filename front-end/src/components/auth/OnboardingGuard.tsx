@@ -3,10 +3,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { Spinner } from '@/components/ui'
 
-/**
- * Wraps routes that require completed onboarding (e.g. /home).
- * If the user's interests field is empty, redirects to onboarding.
- */
 export interface OnboardingGuardProps {
   children: React.ReactNode
 }
@@ -38,6 +34,10 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
 
   if (!hasCompletedOnboarding) {
     return <Navigate to="/onboarding" replace />
+  }
+
+  if (!profile?.group_id) {
+    return <Navigate to="/waiting" replace />
   }
 
   return <>{children}</>

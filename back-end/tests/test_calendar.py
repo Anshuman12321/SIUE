@@ -53,11 +53,12 @@ class TestGoogleCalendarAuth:
         assert "accounts.google.com" in resp.headers["location"]
         mock_build_url.assert_called_once_with(user_id)
 
+    @patch("server.get_db")
     @patch("server.sync_availability")
     @patch("server.save_tokens")
     @patch("server.exchange_code_for_tokens")
     def test_callback_saves_tokens_and_redirects(
-        self, mock_exchange, mock_save, mock_sync, client, user_id
+        self, mock_exchange, mock_save, mock_sync, mock_get_db, client, user_id
     ):
         mock_exchange.return_value = {
             "access_token": "at",
@@ -86,11 +87,12 @@ class TestGoogleCalendarAuth:
         assert resp.status_code == 400
         assert "Token exchange failed" in resp.json()["detail"]
 
+    @patch("server.get_db")
     @patch("server.sync_availability")
     @patch("server.save_tokens")
     @patch("server.exchange_code_for_tokens")
     def test_callback_still_redirects_if_sync_fails(
-        self, mock_exchange, mock_save, mock_sync, client, user_id
+        self, mock_exchange, mock_save, mock_sync, mock_get_db, client, user_id
     ):
         mock_exchange.return_value = {
             "access_token": "at",
