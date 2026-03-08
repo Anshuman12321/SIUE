@@ -1,4 +1,4 @@
-# Riley — Find Your People. Plan Your Vibe.
+# Connect — Find Your People. Plan Your Vibe.
 
 A full-stack **hangout app** that matches users by interests, location, and calendar availability, forms small groups, and helps them discover and vote on events—with AI-powered outbound calls for reservations.
 
@@ -18,7 +18,7 @@ The result: more scrolling, fewer real hangouts.
 
 ## The Solution
 
-**Riley** is an end-to-end platform that:
+**Connect** is an end-to-end platform that:
 
 1. **Matches you with compatible people** using your interests, location, budget, and preferences—and only pairs you with users who share at least one **2+ hour free window** in the next 7 days (via Google Calendar).
 2. **Puts you in small groups** (e.g. 3–4 people) so you can see who you’re matched with and coordinate.
@@ -169,4 +169,4 @@ All group and event data displayed in the dashboard are **loaded from Supabase**
 
 ## Summary
 
-**Riley** solves the “find your people and actually make plans” problem by matching users with **Supabase-backed** profiles, preferences, and calendar availability; forming groups via an embedding + location + free-time matchmaker; and letting groups vote on events and optionally confirm plans with an AI call. All data—users, groups, events, availability—is **stored in and pulled from Supabase**; nothing in the app is driven by mock data.
+**Connect** solves the “find your people and actually make plans” problem by matching users with **Supabase-backed** profiles, preferences, and calendar availability; forming groups via an embedding + location + free-time matchmaker; and letting groups vote on events and optionally confirm plans with an AI call. All data—users, groups, events, availability—is **stored in and pulled from Supabase**; nothing in the app is driven by mock data.
