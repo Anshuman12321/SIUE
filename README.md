@@ -1,6 +1,6 @@
 # Connect — Find Your People. Plan Your Vibe.
 
-A full-stack **hangout app** that matches users by interests, location, and calendar availability, forms small groups, and helps them discover and vote on events—with optional AI-powered outbound calls for reservations.
+A full-stack **hangout app** that matches users by interests, location, and calendar availability, forms small groups, and helps them discover and vote on events—with AI-powered outbound calls for reservations.
 
 ---
 
